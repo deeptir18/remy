@@ -7,7 +7,7 @@ template <class SenderType>
 Network<SenderType>::Network( const SenderType & example_sender, PRNG & s_prng, const NetConfig & config )
   : _prng( s_prng ),
     _senders( config.mean_on_duration, config.mean_off_duration, config.num_senders, example_sender, _prng ),
-    _link( config.link_ppt ),
+    _link( config.link_ppt, 1 * config.link_ppt * config.delay ),
     _delay( config.delay ),
     _rec(),
     _tickno( 0 )
