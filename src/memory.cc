@@ -26,7 +26,22 @@ void Memory::packets_received( const vector< Packet > & packets, const unsigned 
       _rec_send_ewma = (1 - alpha) * _rec_send_ewma + alpha * (x.tick_sent - _last_tick_sent);
       _rec_rec_ewma = (1 - alpha) * _rec_rec_ewma + alpha * (x.tick_received - _last_tick_received);
       _slow_rec_rec_ewma = (1 - slow_alpha) * _slow_rec_rec_ewma + slow_alpha * (x.tick_received - _last_tick_received);
-      _loss_indicator = 0;
+
+      // If you are more than one RTT away from the last loss, set it to zero anyway
+      if (x.tick_received > _time_at_last_loss + _rtt_at_last_loss) {
+        _loss_indicator = 0;
+      }
+
+      // Does this packet indicate a loss?
+      if (x.seq_num > _largest_ack + 1) {
+        _loss_indicator = 1;
+        _time_at_last_loss = x.tick_received;
+        _rtt_at_last_loss = rtt;
+      }
+
+      // Update largest_ack now
+      assert(_largest_ack <= x.seq_num);
+      _largest_ack = x.seq_num;
 
       _last_tick_sent = x.tick_sent;
       _last_tick_received = x.tick_received;

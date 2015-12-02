@@ -16,11 +16,21 @@ private:
   DataType _rec_rec_ewma;
   DataType _rtt_ratio;
   DataType _slow_rec_rec_ewma;
-  DataType _loss_indicator; 
- 
+  DataType _loss_indicator;
+
+  // Internal state for rtt ratio
   double _last_tick_sent;
   double _last_tick_received;
   double _min_rtt;
+
+  // Internal state for loss_indicator, largest ack seen so far
+  int _largest_ack = -1;
+
+  // RTT at the last loss, so that we track only one loss every RTT
+  double _rtt_at_last_loss = 0;
+
+  // Time at the last loss
+  double _time_at_last_loss = 0;
 
 public:
   Memory( const std::vector< DataType > & s_data )
