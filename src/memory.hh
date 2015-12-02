@@ -55,7 +55,7 @@ public:
       _min_rtt( 0 )
   {}
 
-  void reset( void ) { _rec_send_ewma = _rec_rec_ewma = _rtt_ratio = _slow_rec_rec_ewma = _loss_indicator = _last_tick_sent = _last_tick_received = _min_rtt = 0; }
+  void reset( void );
 
   static const unsigned int datasize = 4;
 

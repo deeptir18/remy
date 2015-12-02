@@ -53,6 +53,10 @@ void Memory::packets_received( const vector< Packet > & packets, const unsigned 
   }
 }
 
+void Memory::reset( void ) {
+  _rec_send_ewma = _rec_rec_ewma = _rtt_ratio = _slow_rec_rec_ewma = _loss_indicator = _last_tick_sent = _last_tick_received = _min_rtt = _time_at_last_loss = _rtt_at_last_loss = 0;
+}
+
 string Memory::str( void ) const
 {
   char tmp[ 256 ];
