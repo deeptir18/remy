@@ -12,13 +12,29 @@ static const double slow_alpha = 1.0 / 256.0;
 
 void Memory::packets_received( const vector< Packet > & packets, const unsigned int flow_id )
 {
-  _loss_indicator = 0;
   for ( const auto &x : packets ) {
     if ( x.flow_id != flow_id ) {
       continue;
     }
-
+   
     const double rtt = x.tick_received - x.tick_sent;
+ 
+    // reset the loss indicator if we have passed approx 1 RTT
+    if (x.tick_received > _time_at_last_loss + _rtt_at_last_loss) {
+       _loss_indicator = 0;
+    }
+
+    // Does this packet indicate a loss?
+    if (x.seq_num > _largest_ack + 1) {
+      _loss_indicator = 1;
+      _time_at_last_loss = x.tick_received;
+      _rtt_at_last_loss = rtt;
+    }
+
+    // Update the largest ack
+    assert(_largest_ack <= x.seq_num);
+    _largest_ack = x.seq_num;
+
     if ( _last_tick_sent == 0 || _last_tick_received == 0 ) {
       _last_tick_sent = x.tick_sent;
       _last_tick_received = x.tick_received;
@@ -70,7 +86,10 @@ Memory::Memory( const RemyBuffers::Memory & dna )
     _loss_indicator ( dna.loss_indicator() ),
     _last_tick_sent( 0 ),
     _last_tick_received( 0 ),
-    _min_rtt( 0 )
+    _min_rtt( 0 ),
+    _time_at_last_loss( 0 ),
+    _rtt_at_last_loss( 0 ),
+    _largest_ack( -1 )
 {
 }
 
