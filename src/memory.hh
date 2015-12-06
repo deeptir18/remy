@@ -21,6 +21,9 @@ private:
   double _last_tick_sent;
   double _last_tick_received;
   double _min_rtt;
+  double _time_at_last_loss;
+  double _rtt_at_last_loss;
+  int _largest_ack;
 
 public:
   Memory( const std::vector< DataType > & s_data )
@@ -31,7 +34,10 @@ public:
       _loss_indicator( s_data.at( 4 ) ),
       _last_tick_sent( 0 ),
       _last_tick_received( 0 ),
-      _min_rtt( 0 )
+      _min_rtt( 0 ),
+      _time_at_last_loss( 0 ),
+      _rtt_at_last_loss( 0 ),
+      _largest_ack( 0 )
   {}
 
   Memory()
@@ -42,10 +48,16 @@ public:
       _loss_indicator( 0 ),
       _last_tick_sent( 0 ),
       _last_tick_received( 0 ),
-      _min_rtt( 0 )
+      _min_rtt( 0 ),
+      _time_at_last_loss( 0 ),
+      _rtt_at_last_loss( 0 ),
+      _largest_ack ( -1 )
   {}
 
-  void reset( void ) { _rec_send_ewma = _rec_rec_ewma = _rtt_ratio = _slow_rec_rec_ewma = _loss_indicator = _last_tick_sent = _last_tick_received = _min_rtt = 0; }
+  void reset( void ) { 
+    _rec_send_ewma = _rec_rec_ewma = _rtt_ratio = _slow_rec_rec_ewma = _loss_indicator = _last_tick_sent = _last_tick_received = _min_rtt = _time_at_last_loss = _rtt_at_last_loss = 0;
+    _largest_ack = -1;
+   }
 
   static const unsigned int datasize = 5;
 
