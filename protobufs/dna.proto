@@ -59,6 +59,7 @@ message ConfigRange {
   optional Range link_packets_per_ms = 71;
   optional Range rtt = 72;
   optional Range num_senders = 73;
+  optional double  bdp_multiplier = 74;
 
   optional double mean_off_duration = 81;
   optional double mean_on_duration = 82;

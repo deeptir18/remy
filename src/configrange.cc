@@ -18,6 +18,7 @@ RemyBuffers::ConfigRange ConfigRange::DNA( void ) const
   ret.mutable_rtt()->CopyFrom( pair_to_range( rtt_ms ) );
   ret.mutable_num_senders()->CopyFrom( pair_to_range( make_pair( min_senders, max_senders ) ) );
 
+  ret.set_bdp_multiplier( bdp_multiplier);
   ret.set_mean_off_duration( mean_off_duration );
   ret.set_mean_on_duration( mean_on_duration );
 

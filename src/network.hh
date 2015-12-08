@@ -14,6 +14,7 @@ class NetConfig
 public:
   double mean_on_duration, mean_off_duration;
   unsigned int num_senders;
+  unsigned int bdp_multiplier;
   double link_ppt;
   double delay;
 
@@ -21,6 +22,7 @@ public:
     : mean_on_duration( 5000.0 ),
       mean_off_duration( 5000.0 ),
       num_senders( 8 ),
+      bdp_multiplier( 1 ),
       link_ppt( 1.0 ),
       delay( 150 )
   {}
@@ -28,6 +30,7 @@ public:
   NetConfig & set_link_ppt( const double s_link_ppt ) { link_ppt = s_link_ppt; return *this; }
   NetConfig & set_delay( const double s_delay ) { delay = s_delay; return *this; }
   NetConfig & set_num_senders( const unsigned int n ) { num_senders = n; return *this; }
+  NetConfig & set_bdp_multiplier( const unsigned int s_bdp_multiplier) { bdp_multiplier = s_bdp_multiplier; return *this; }
   NetConfig & set_on_duration( const double & duration ) { mean_on_duration = duration; return *this; }
   NetConfig & set_off_duration( const double & duration ) { mean_off_duration = duration; return *this; }
 
