@@ -46,5 +46,5 @@ AC_LANG_POP(C++)
 
 # Checks for library functions.
 
-AC_CONFIG_FILES([Makefile protobufs/Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile protobufs/Makefile src/Makefile configs/Makefile])
 AC_OUTPUT

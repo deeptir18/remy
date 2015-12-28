@@ -7,6 +7,7 @@
 #include <fcntl.h>
 
 #include "ratbreeder.hh"
+#include "configrange.pb.h"
 
 using namespace std;
 
@@ -14,6 +15,8 @@ int main( int argc, char *argv[] )
 {
   WhiskerTree whiskers;
   string output_filename;
+  InputConfigRange::ConfigRange input_config;
+  bool supplied_config = false;
 
   for ( int i = 1; i < argc; i++ ) {
     string arg( argv[ i ] );
@@ -38,15 +41,31 @@ int main( int argc, char *argv[] )
       }
     } else if ( arg.substr( 0, 3 ) == "of=" ) {
       output_filename = string( arg.substr( 3 ) );
+    } else if ( arg.substr(0, 3 ) == "cf=" ) {
+      string config_filename( arg.substr( 3 ) );
+      int cfd = open( config_filename.c_str(), O_RDONLY );
+      if ( cfd < 0 ) {
+        perror( "open config file error");
+        exit( 1 );
+      }
+      if ( !input_config.ParseFromFileDescriptor( cfd ) ) {
+        fprintf( stderr, "Could not parse input config from file %s. \n", config_filename.c_str() );
+        exit ( 1 );
+      }
+      supplied_config = true;
     }
   }
-
+  if ( !(supplied_config) ) {
+    fprintf( stderr, "Provide an input config protobuf. \n");
+    exit ( 1 );
+  }
+ 
   ConfigRange configuration_range;
-  configuration_range.link_packets_per_ms = make_pair( 0.1, 100.0 ); /* 1 Mbps to 1 Gbps */
-  configuration_range.rtt_ms = make_pair( 150, 150 ); /* ms */
-  configuration_range.max_senders = 2;
-  configuration_range.mean_on_duration = 1000;
-  configuration_range.mean_off_duration = 1000;
+  configuration_range.link_packets_per_ms = make_pair( input_config.min_link_ppt(), input_config.max_link_ppt() ); /* 1 Mbps to 1 Gbps */
+  configuration_range.rtt_ms = make_pair( input_config.min_rtt(), input_config.max_rtt() ); /* ms */
+  configuration_range.max_senders = input_config.max_senders();
+  configuration_range.mean_on_duration = input_config.mean_on_duration();
+  configuration_range.mean_off_duration = input_config.mean_off_duration();
   //  configuration_range.lo_only = true;
   RatBreeder breeder( configuration_range );
 

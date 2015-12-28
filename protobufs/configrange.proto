@@ -1,0 +1,28 @@
+package InputConfigRange;
+
+message ConfigRange {
+  optional double min_link_ppt = 1;
+  optional double max_link_ppt = 2;
+  optional double min_rtt = 3;
+  optional double max_rtt = 4;
+  optional uint32 min_senders = 5;
+  optional uint32 max_senders = 6;
+  optional double mean_on_duration = 7;
+  optional double mean_off_duration = 8;
+  optional bool lo_only = 9;
+  optional double link_ppt_increment = 10;
+  optional double rtt_increment = 11;
+  optional double senders_increment = 12;
+}
+
+message ConfigVector {
+  repeated NetConfig Config = 13;
+}
+
+message NetConfig {
+  optional double mean_on_duration = 14;
+  optional double mean_off_duration = 15;
+  optional uint32 num_senders = 16;
+  optional double link_ppt = 17;
+  optional double delay = 18;
+}
