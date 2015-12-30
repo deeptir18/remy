@@ -60,3 +60,12 @@ Evaluator::Outcome Evaluator::score( const std::vector< Whisker > & replacements
 
   return score( run_whiskers, trace, carefulness );
 }
+
+InputConfigRange::ConfigVector Evaluator::WriteConfigs() const {
+  InputConfigRange::ConfigVector ret;
+  for ( auto &x: _configs ) {
+    InputConfigRange::NetConfig *config = ret.add_config();
+    *config = x.DNA(); 
+  }
+  return ret;
+}

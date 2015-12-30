@@ -8,6 +8,7 @@
 #include "delay.hh"
 #include "receiver.hh"
 #include "random.hh"
+#include "configrange.pb.h"
 
 class NetConfig
 {
@@ -30,7 +31,19 @@ public:
   NetConfig & set_num_senders( const unsigned int n ) { num_senders = n; return *this; }
   NetConfig & set_on_duration( const double & duration ) { mean_on_duration = duration; return *this; }
   NetConfig & set_off_duration( const double & duration ) { mean_off_duration = duration; return *this; }
-
+  
+  InputConfigRange::NetConfig DNA( void ) const
+  {
+    InputConfigRange::NetConfig ret;
+    ret.set_mean_on_duration( mean_on_duration );
+    ret.set_mean_off_duration( mean_off_duration );
+    ret.set_num_senders( num_senders );
+    ret.set_delay( delay );
+    ret.set_link_ppt( link_ppt );
+   
+    return ret;
+  }
+ 
   std::string str( void ) const
   {
     char tmp[ 256 ];

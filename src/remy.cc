@@ -17,7 +17,7 @@ int main( int argc, char *argv[] )
   string output_filename;
   InputConfigRange::ConfigRange input_config;
   bool supplied_config = false;
-
+  string training_config_file;
   for ( int i = 1; i < argc; i++ ) {
     string arg( argv[ i ] );
     if ( arg.substr( 0, 3 ) == "if=" ) {
@@ -52,7 +52,13 @@ int main( int argc, char *argv[] )
         fprintf( stderr, "Could not parse input config from file %s. \n", config_filename.c_str() );
         exit ( 1 );
       }
+      if ( close( cfd ) < 0 ) {
+        perror( "close" );
+        exit( 1 );
+      }
       supplied_config = true;
+    } else if ( arg.substr( 0, 3 ) == "tf=" ) {
+      training_config_file = string( arg.substr( 3 ) );
     }
   }
   if ( !(supplied_config) ) {
@@ -91,9 +97,16 @@ int main( int argc, char *argv[] )
   } else {
     printf( "Not saving output. Use the of=FILENAME argument to save the results.\n" );
   }
+  
+  if ( !training_config_file.empty() ) {
+    printf( "Writing training configs to \"%s.N\".\n", training_config_file.c_str() );
+  } else {
+    printf( "Not recording the training config parameters to a protobuf.\n" );
+  }
+  InputConfigRange::ConfigVector training_configs;
 
   while ( 1 ) {
-    auto outcome = breeder.improve( whiskers );
+    auto outcome = breeder.improve( whiskers, training_configs );
     printf( "run = %u, score = %f\n", run, outcome.score );
 
     printf( "whiskers: %s\n", whiskers.str().c_str() );
@@ -102,6 +115,24 @@ int main( int argc, char *argv[] )
       printf( "===\nconfig: %s\n", run.first.str().c_str() );
       for ( auto &x : run.second ) {
 	printf( "sender: [tp=%f, del=%f]\n", x.first / run.first.link_ppt, x.second / run.first.delay );
+      }
+    }
+    if ( !training_config_file.empty() ) {
+      char tof[ 128 ];
+      snprintf( tof, 128, "%s", training_config_file.c_str());
+      fprintf( stderr, "Writing to \"%s\"... ", tof );
+      int tfd = open( tof, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR );
+      if ( tfd < 0 ) {
+        perror( "open" );
+        exit( 1 );
+      }
+      if ( not training_configs.SerializeToFileDescriptor( tfd ) ) {
+        fprintf( stderr, "Could not serialize training ConfigVector.\n" );
+        exit( 1 );
+      }
+     if ( close( tfd ) < 0 ) {
+        perror( "close" );
+        exit( 1 );
       }
     }
 

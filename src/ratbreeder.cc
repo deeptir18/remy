@@ -34,18 +34,22 @@ void RatBreeder::apply_best_split( WhiskerTree & whiskers, const unsigned int ge
   }
 }
 
-Evaluator::Outcome RatBreeder::improve( WhiskerTree & whiskers )
+Evaluator::Outcome RatBreeder::improve( WhiskerTree & whiskers, InputConfigRange::ConfigVector training_configs )
 {
   /* back up the original whiskertree */
   /* this is to ensure we don't regress */
   WhiskerTree best_so_far( whiskers );
-
+  bool written = false;
   /* evaluate the whiskers we have */
   whiskers.reset_generation();
   unsigned int generation = 0;
 
   while ( 1 ) {
     const Evaluator eval( whiskers, _range );
+    if (!(written)) {
+      training_configs = eval.WriteConfigs();
+      written = true;
+    }
     unordered_map< Whisker, double, boost::hash< Whisker > > evalcache;
 
     auto outcome( eval.score( {} ) );

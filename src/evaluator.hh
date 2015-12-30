@@ -6,6 +6,7 @@
 #include "random.hh"
 #include "whiskertree.hh"
 #include "network.hh"
+#include "configrange.pb.h"
 
 class Evaluator
 {
@@ -30,6 +31,7 @@ public:
   Evaluator( const WhiskerTree & s_whiskers, const ConfigRange & range );
   Outcome score( WhiskerTree & run_whiskers, const bool trace = false, const unsigned int carefulness = 1 ) const;
   Outcome score( const std::vector< Whisker > & replacements, const bool trace = false, const unsigned int carefulness = 1 ) const;
+  InputConfigRange::ConfigVector WriteConfigs() const;
 };
 
 #endif

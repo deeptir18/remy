@@ -3,6 +3,7 @@
 
 #include "configrange.hh"
 #include "evaluator.hh"
+#include "configrange.pb.h"
 
 class RatBreeder
 {
@@ -14,7 +15,7 @@ private:
 public:
   RatBreeder( ConfigRange & s_range ) : _range( s_range ) {}
 
-  Evaluator::Outcome improve( WhiskerTree & whiskers );
+  Evaluator::Outcome improve( WhiskerTree & whiskers, InputConfigRange::ConfigVector training_configs );
 };
 
 #endif
