@@ -50,7 +50,7 @@ Evaluator::Outcome RatBreeder::improve( WhiskerTree & whiskers, InputConfigRange
       training_configs = eval.WriteConfigs();
       written = true;
     }
-    unordered_map< Whisker, double, boost::hash< Whisker > > evalcache;
+   unordered_map< Whisker, double, boost::hash< Whisker > > evalcache;
 
     auto outcome( eval.score( {} ) );
 

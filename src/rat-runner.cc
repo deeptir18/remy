@@ -10,8 +10,7 @@
 
 using namespace std;
 
-int main( int argc, char *argv[] )
-{
+int main( int argc, char *argv[] ) {
   WhiskerTree whiskers;
   unsigned int num_senders = 2;
   double link_ppt = 1.0;
