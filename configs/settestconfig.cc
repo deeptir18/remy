@@ -12,22 +12,41 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
   string output_filename;
-  for (int i = 1; i < argc; i++) {
-    string arg( argv[ i ] );
-    if ( arg.substr( 0, 3 ) == "of=") {
-      output_filename = string( arg.substr( 3 ) ) + ".pb";
-    }
-  }
 
   // Network Config Range parameters
   // Modify the value of these variables
   // To make a protobuf that supports this config range
-  double link_ppt = 3.162;
-  double delay = 150;
-  uint32_t num_senders = 2;
-  double mean_on_duration = 1000;
-  double mean_off_duration = 1000;
-  
+  double link_ppt = 0;
+  double delay = 0;
+  uint32_t num_senders = 0;
+  double mean_on_duration = 0;
+  double mean_off_duration = 0;
+
+  for (int i = 1; i < argc; i++) {
+    string arg( argv[ i ] );
+    if ( arg.substr( 0, 3 ) == "of=") {
+      output_filename = string( arg.substr( 3 ) ) + ".pb";
+    } else if ( arg.substr( 0, 5 ) == "link=") {
+      link_ppt = atof( arg.substr( 5 ).c_str() );
+      fprintf( stderr, "Setting min_link packets per ms to %f\n", link_ppt );
+    } else if ( arg.substr( 0, 4 ) == "del=" ) {
+      delay = atof( arg.substr( 4 ).c_str() );
+      fprintf( stderr, "Setting delay to %f ms\n", delay );
+    } else if ( arg.substr( 0, 3 ) == "on=" ) {
+      mean_on_duration = atof( arg.substr( 3 ).c_str() );
+      fprintf( stderr, "Setting mean_on_duration to %f ms\n", mean_on_duration );
+    } else if ( arg.substr( 0, 4 ) == "off=" ) {
+      mean_off_duration = atof( arg.substr( 4 ).c_str() );
+      fprintf( stderr, "Setting mean_off_duration to %f ms\n", mean_off_duration );
+    } else if ( arg.substr( 0, 5 ) == "nsrc=" ) {
+      num_senders =  atoi( arg.substr( 5 ).c_str() );
+      fprintf( stderr, "Setting num_senders to %d\n", num_senders );
+    }
+  }
+  if ( ( link_ppt == 0 ) || ( delay == 0 ) || ( num_senders == 0 ) || ( mean_on_duration == 0 ) || ( mean_off_duration == 0 ) ) {
+    fprintf( stderr, "Provide link=, del=, nsrc=, on=, and off=  arguments.\n" );
+    exit ( 1 );
+  } 
   InputConfigRange::NetConfig test_config;
 
   test_config.set_link_ppt(link_ppt);

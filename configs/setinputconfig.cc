@@ -11,24 +11,53 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
   string output_filename;
+  // Network Config Range parameters
+  // Modify the value of these variables
+  // To make a protobuf that supports this config range
+  double min_link_ppt = 0;
+  double max_link_ppt = 0;
+  double min_rtt = 0;
+  double max_rtt = 0;
+  uint32_t min_senders = 0;
+  uint32_t max_senders = 0;
+  double mean_on_duration = 0;
+  double mean_off_duration = 0;
+  bool lo_only = false; 
   for (int i = 1; i < argc; i++) {
     string arg( argv[ i ] );
     if ( arg.substr( 0, 3 ) == "of=") {
       output_filename = string( arg.substr( 3 ) ) + ".pb";
+    } else if ( arg.substr( 0, 9 ) == "min_nsrc=" ) {
+      min_senders = atoi( arg.substr( 9 ).c_str() );
+      fprintf( stderr, "Setting min_senders to %d\n", min_senders );
+    } else if ( arg.substr( 0, 9 ) == "max_nsrc=" ) {
+      max_senders = atoi( arg.substr( 9 ).c_str() );
+      fprintf( stderr, "Setting max_senders to %d\n", max_senders );
+    } else if ( arg.substr( 0, 9 ) == "min_link=" ) {
+      min_link_ppt = atof( arg.substr( 9 ).c_str() );
+      fprintf( stderr, "Setting min_link packets per ms to %f\n", min_link_ppt );
+    } else if ( arg.substr( 0, 9 ) == "max_link=" ) {
+      max_link_ppt = atof( arg.substr( 9 ).c_str() );
+      fprintf( stderr, "Setting max_link packets per ms to %f\n", max_link_ppt );
+    } else if ( arg.substr( 0, 8 ) == "min_rtt=" ) {
+      min_rtt = atof( arg.substr( 8 ).c_str() );
+      fprintf( stderr, "Setting delay to %f ms\n", min_rtt );
+    } else if ( arg.substr( 0, 8 ) == "max_rtt=" ) {
+      max_rtt = atof( arg.substr( 8 ).c_str() );
+      fprintf( stderr, "Setting delay to %f ms\n", max_rtt );
+    } else if ( arg.substr( 0, 3 ) == "on=" ) {
+      mean_on_duration = atof( arg.substr( 3 ).c_str() );
+      fprintf( stderr, "Setting mean_on_duration to %f ms\n", mean_on_duration );
+    } else if ( arg.substr( 0, 4 ) == "off=" ) {
+      mean_off_duration = atof( arg.substr( 4 ).c_str() );
+      fprintf( stderr, "Setting mean_off_duration to %f ms\n", mean_off_duration );
     }
   }
-  // Network Config Range parameters
-  // Modify the value of these variables
-  // To make a protobuf that supports this config range
-  double min_link_ppt = .1;
-  double max_link_ppt = 100;
-  double min_rtt = 150;
-  double max_rtt = 150;
-  uint32_t min_senders = 2;
-  uint32_t max_senders = 2;
-  double mean_on_duration = 1000;
-  double mean_off_duration = 1000;
-  bool lo_only = false;
+  
+  if ((min_link_ppt == 0 ) || ( max_link_ppt == 0 ) || ( min_rtt == 0 )  || ( max_rtt == 0 ) || ( min_senders == 0 )||( max_senders == 0 ) || ( mean_off_duration == 0 )|| ( mean_on_duration == 0 )) {
+  fprintf( stderr, "Provide min_link=, max_link=, min_rtt=, max_rtt=, min_nsrc=, max_nsrc=, on=, off= arguments. \n");
+  exit( 1 );
+}
 
   // Creates config range object 
   InputConfigRange::ConfigRange inputconfig;
