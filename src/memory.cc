@@ -35,6 +35,7 @@ void Memory::packets_received( const vector< Packet > & packets, const unsigned 
     assert(_largest_ack <= x.seq_num);
     _largest_ack = x.seq_num;
 
+    // update the rest of the memory
     if ( _last_tick_sent == 0 || _last_tick_received == 0 ) {
       _last_tick_sent = x.tick_sent;
       _last_tick_received = x.tick_received;
