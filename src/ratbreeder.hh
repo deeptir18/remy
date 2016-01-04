@@ -15,7 +15,7 @@ private:
 public:
   RatBreeder( ConfigRange & s_range ) : _range( s_range ) {}
 
-  Evaluator::Outcome improve( WhiskerTree & whiskers, InputConfigRange::ConfigVector training_configs );
+  Evaluator::Outcome improve( WhiskerTree & whiskers );
 };
 
 #endif
