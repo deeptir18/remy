@@ -23,6 +23,8 @@ int main(int argc, char *argv[]) {
   double mean_on_duration = 0;
   double mean_off_duration = 0;
   bool lo_only = false; 
+  uint32_t min_bdp_mult = 0;
+  uint32_t max_bdp_mult = 0;
   for (int i = 1; i < argc; i++) {
     string arg( argv[ i ] );
     if ( arg.substr( 0, 3 ) == "of=") {
@@ -51,11 +53,17 @@ int main(int argc, char *argv[]) {
     } else if ( arg.substr( 0, 4 ) == "off=" ) {
       mean_off_duration = atof( arg.substr( 4 ).c_str() );
       fprintf( stderr, "Setting mean_off_duration to %f ms\n", mean_off_duration );
+    } else if ( arg.substr( 0, 8 ) == "min_bdp=" ) {
+      min_bdp_mult = atoi( arg.substr( 8 ).c_str() );
+      fprintf( stderr, "Setting min_bdp_mult to %d\n", min_bdp_mult );
+    } else if ( arg.substr( 0, 8 ) == "max_bdp=" ) {
+      max_bdp_mult = atoi( arg.substr( 8 ).c_str() ) ;
+      fprintf( stderr, "Setting max_bdp_mult to %d\n", max_bdp_mult );
     }
   }
   
-  if ((min_link_ppt == 0 ) || ( max_link_ppt == 0 ) || ( min_rtt == 0 )  || ( max_rtt == 0 ) || ( min_senders == 0 )||( max_senders == 0 ) || ( mean_off_duration == 0 )|| ( mean_on_duration == 0 )) {
-  fprintf( stderr, "Provide min_link=, max_link=, min_rtt=, max_rtt=, min_nsrc=, max_nsrc=, on=, off= arguments. \n");
+  if ( (min_link_ppt == 0 ) || ( max_link_ppt == 0 ) || ( min_rtt == 0 )  || ( max_rtt == 0 ) || ( min_senders == 0 )||( max_senders == 0 ) || ( mean_off_duration == 0 )|| ( mean_on_duration == 0 ) || ( min_bdp_mult == 0 ) || ( max_bdp_mult == 0 ) ) {
+  fprintf( stderr, "Provide min_link=, max_link=, min_rtt=, max_rtt=, min_nsrc=, max_nsrc=, on=, off=, min_bdp=, and max_bdp= arguments.. \n");
   exit( 1 );
 }
 
@@ -69,6 +77,8 @@ int main(int argc, char *argv[]) {
   inputconfig.set_max_senders(max_senders);
   inputconfig.set_mean_on_duration(mean_on_duration);
   inputconfig.set_mean_off_duration(mean_off_duration);
+  inputconfig.set_min_bdp_multiplier(min_bdp_mult);
+  inputconfig.set_max_bdp_multiplier(max_bdp_mult);
   inputconfig.set_lo_only(lo_only);
 
   if (output_filename.empty()) {

@@ -45,6 +45,7 @@ int main(int argc, char *argv[]) {
     cout << " Mean on duration: " << config.mean_on_duration() << "\n";
     cout << " Mean off duration: " << config.mean_off_duration() << "\n";
     cout << " Num senders: " << config.num_senders() << "\n";
+    cout << " BDP multiplier: " << config.bdp_multiplier() << "\n";
   }  
   return 0;
 

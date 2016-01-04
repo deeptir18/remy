@@ -13,7 +13,7 @@ public:
   double mean_on_duration { 1000 };
   double mean_off_duration { 1000 };
   bool lo_only { false };
-
+  std::pair< unsigned int, unsigned int > bdp_multiplier { 1, 10 };
   RemyBuffers::ConfigRange DNA( void ) const;
 };
 

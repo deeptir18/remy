@@ -21,6 +21,7 @@ int main(int argc, char *argv[]) {
   uint32_t num_senders = 0;
   double mean_on_duration = 0;
   double mean_off_duration = 0;
+  uint32_t bdp_multiplier = 0;
 
   for (int i = 1; i < argc; i++) {
     string arg( argv[ i ] );
@@ -41,10 +42,14 @@ int main(int argc, char *argv[]) {
     } else if ( arg.substr( 0, 5 ) == "nsrc=" ) {
       num_senders =  atoi( arg.substr( 5 ).c_str() );
       fprintf( stderr, "Setting num_senders to %d\n", num_senders );
+    } else if ( arg.substr( 0, 4 ) == "bdp=" ) {
+      bdp_multiplier =  atoi( arg.substr( 4 ).c_str() );
+      fprintf( stderr, "Setting bdp_multiplier to %d\n", bdp_multiplier );
     }
+    
   }
-  if ( ( link_ppt == 0 ) || ( delay == 0 ) || ( num_senders == 0 ) || ( mean_on_duration == 0 ) || ( mean_off_duration == 0 ) ) {
-    fprintf( stderr, "Provide link=, del=, nsrc=, on=, and off=  arguments.\n" );
+  if ( ( link_ppt == 0 ) || ( delay == 0 ) || ( num_senders == 0 ) || ( mean_on_duration == 0 ) || ( mean_off_duration == 0 ) || ( bdp_multiplier == 0 ) ) {
+    fprintf( stderr, "Provide link=, del=, nsrc=, on=, off=, bdp=, arguments.\n" );
     exit ( 1 );
   } 
   InputConfigRange::NetConfig test_config;
@@ -54,6 +59,7 @@ int main(int argc, char *argv[]) {
   test_config.set_num_senders(num_senders);
   test_config.set_mean_on_duration(mean_on_duration);
   test_config.set_mean_off_duration(mean_off_duration);
+  test_config.set_bdp_multiplier(bdp_multiplier);
 
   if (output_filename.empty()) {
     fprintf( stderr, "Provide of=file_name argument.\n" );

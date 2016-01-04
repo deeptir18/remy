@@ -72,9 +72,10 @@ int main( int argc, char *argv[] )
   configuration_range.max_senders = input_config.max_senders();
   configuration_range.mean_on_duration = input_config.mean_on_duration();
   configuration_range.mean_off_duration = input_config.mean_off_duration();
+  configuration_range.bdp_multiplier = make_pair( input_config.min_bdp_multiplier(), input_config.max_bdp_multiplier() ); /* 1 to 10 %*/
   //  configuration_range.lo_only = true;
   RatBreeder breeder( configuration_range );
-
+  
   unsigned int run = 0;
 
   printf( "#######################\n" );
@@ -88,7 +89,9 @@ int main( int argc, char *argv[] )
 	  configuration_range.max_senders );
   printf( "Optimizing for mean_on_duration = %f, mean_off_duration = %f\n",
 	  configuration_range.mean_on_duration, configuration_range.mean_off_duration );
-
+  printf( "Optimizing for bdp_multiplier in [%d, %d]\n",
+          configuration_range.bdp_multiplier.first,
+          configuration_range.bdp_multiplier.second );
   printf( "Initial rules (use if=FILENAME to read from disk): %s\n", whiskers.str().c_str() );
   printf( "#######################\n" );
 
@@ -123,7 +126,7 @@ int main( int argc, char *argv[] )
     }
     if ( !training_config_file.empty() ) {
       char tof[ 128 ];
-      snprintf( tof, 128, "%s", training_config_file.c_str());
+      snprintf( tof, 128, "%s.%d", training_config_file.c_str(), run);
       fprintf( stderr, "Writing to \"%s\"... ", tof );
       int tfd = open( tof, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR );
       if ( tfd < 0 ) {

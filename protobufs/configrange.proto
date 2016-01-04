@@ -13,17 +13,21 @@ message ConfigRange {
   optional double link_ppt_increment = 10;
   optional double rtt_increment = 11;
   optional double senders_increment = 12;
+  optional double min_bdp_multiplier = 13;
+  optional double max_bdp_multiplier = 14;
+  optional double bdp_increment = 15; 
 }
 
 message ConfigVector {
-  repeated NetConfig config = 13;
-  optional uint32 prng_seed = 14;
+  repeated NetConfig config = 20;
+  optional uint32 prng_seed = 21;
 }
 
 message NetConfig {
-  optional double mean_on_duration = 15;
-  optional double mean_off_duration = 16;
-  optional uint32 num_senders = 17;
-  optional double link_ppt = 18;
-  optional double delay = 19;
+  optional double mean_on_duration = 30;
+  optional double mean_off_duration = 31;
+  optional uint32 num_senders = 32;
+  optional double link_ppt = 33;
+  optional double delay = 34;
+  optional uint32 bdp_multiplier = 35;
 }

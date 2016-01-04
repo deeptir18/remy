@@ -18,7 +18,7 @@ Evaluator::Evaluator( const WhiskerTree & s_whiskers, const ConfigRange & range 
   const double rtt_max = 150.0;
 
   while ( rtt <= rtt_max ) {
-    _configs.push_back( NetConfig().set_link_ppt( link_speed ).set_delay( rtt ).set_num_senders( range.max_senders ).set_on_duration( range.mean_on_duration ).set_off_duration( range.mean_off_duration ) );
+    _configs.push_back( NetConfig().set_link_ppt( link_speed ).set_delay( rtt ).set_num_senders( range.max_senders ).set_on_duration( range.mean_on_duration ).set_off_duration( range.mean_off_duration ).set_bdp_multiplier( range.bdp_multiplier.first ) );
     rtt += rtt_increment;
   }
 }
