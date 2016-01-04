@@ -121,9 +121,11 @@ int main( int argc, char *argv[] )
 	printf( "sender: [tp=%f, del=%f]\n", x.first / run.first.link_ppt, x.second / run.first.delay );
       }
     }
+    cout << "#########PRINTING_TRAINING_CONFIG_SIZE#########" << "\n";
+    cout << training_configs.config_size() << ": config training size " << "\n";
     if ( !training_config_file.empty() ) {
       char tof[ 128 ];
-      snprintf( tof, 128, "%s", training_config_file.c_str());
+      snprintf( tof, 128, "%s.%d", training_config_file.c_str(), run );
       fprintf( stderr, "Writing to \"%s\"... ", tof );
       int tfd = open( tof, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR );
       if ( tfd < 0 ) {
