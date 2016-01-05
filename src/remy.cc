@@ -104,25 +104,28 @@ int main( int argc, char *argv[] )
     printf( "Not recording the training config parameters to a protobuf.\n" );
   }
   InputConfigRange::ConfigVector training_configs;
+  bool written = false;
 
   while ( 1 ) {
     auto outcome = breeder.improve( whiskers ) ;
     printf( "run = %u, score = %f\n", run, outcome.score );
 
     printf( "whiskers: %s\n", whiskers.str().c_str() );
-
-    for ( auto &run : outcome.throughputs_delays ) {
-      printf( "===\nconfig: %s\n", run.first.str().c_str() );
-      // record the config to the protobuf
-      InputConfigRange::NetConfig* net_config = training_configs.add_config();
-      *net_config = run.first.DNA();
-  
+    if ( !(written) ) {
+      for ( auto &run : outcome.throughputs_delays) {
+        // record the config to the protobuf
+        InputConfigRange::NetConfig* net_config = training_configs.add_config();
+        *net_config = run.first.DNA();
+        written = true;
+      
+      }
+    }
+    for ( auto &run : outcome.throughputs_delays ) { 
       for ( auto &x : run.second ) {
 	printf( "sender: [tp=%f, del=%f]\n", x.first / run.first.link_ppt, x.second / run.first.delay );
       }
     }
-    cout << "#########PRINTING_TRAINING_CONFIG_SIZE#########" << "\n";
-    cout << training_configs.config_size() << ": config training size " << "\n";
+    
     if ( !training_config_file.empty() ) {
       char tof[ 128 ];
       snprintf( tof, 128, "%s.%d", training_config_file.c_str(), run );

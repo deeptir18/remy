@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
     exit( 1 );
   }
   
-
+  cout << "size: " << training_vector.config_size();
   // parse and print the training config vectors
   for (int i = 0; i < training_vector.config_size(); i++) {
     const InputConfigRange::NetConfig& config = training_vector.config(i);
