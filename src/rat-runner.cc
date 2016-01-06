@@ -66,11 +66,11 @@ int main( int argc, char *argv[] ) {
   }
 
   ConfigRange configuration_range;
-  configuration_range.link_packets_per_ms = make_pair( link_ppt, 0 ); /* 1 Mbps to 10 Mbps */
-  configuration_range.rtt_ms = make_pair( delay, 0 ); /* ms */
-  configuration_range.max_senders = num_senders;
-  configuration_range.mean_on_duration = mean_on_duration;
-  configuration_range.mean_off_duration = mean_off_duration;
+  configuration_range.link_packets_per_ms = make_pair( link_ppt, link_ppt ); /* 1 Mbps to 10 Mbps */
+  configuration_range.rtt_ms = make_pair( delay, delay ); /* ms */
+  configuration_range.num_senders = make_pair( num_senders, num_senders );
+  configuration_range.mean_on_duration = make_pair( mean_on_duration, mean_on_duration );
+  configuration_range.mean_off_duration = make_pair(mean_off_duration, mean_off_duration );
   configuration_range.lo_only = true;
 
   Evaluator eval( whiskers, configuration_range );

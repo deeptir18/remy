@@ -68,6 +68,7 @@ int main(int argc, char *argv[]) {
   }
 
 
+
   if ( not test_config.SerializeToFileDescriptor( fd ) ) {
     fprintf( stderr, "Could not serialize TestConfig parameters.\n" );
     exit( 1 );

@@ -60,6 +60,6 @@ message ConfigRange {
   optional Range rtt = 72;
   optional Range num_senders = 73;
 
-  optional double mean_off_duration = 81;
-  optional double mean_on_duration = 82;
+  optional Range mean_off_duration = 81;
+  optional Range mean_on_duration = 82;
 }

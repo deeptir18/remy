@@ -8,6 +8,7 @@
 
 #include "ratbreeder.hh"
 #include "configrange.pb.h"
+#include "configrange.hh"
 
 using namespace std;
 
@@ -67,12 +68,20 @@ int main( int argc, char *argv[] )
   }
  
   ConfigRange configuration_range;
-  configuration_range.link_packets_per_ms = make_pair( input_config.min_link_ppt(), input_config.max_link_ppt() ); /* 1 Mbps to 1 Gbps */
-  configuration_range.rtt_ms = make_pair( input_config.min_rtt(), input_config.max_rtt() ); /* ms */
-  configuration_range.max_senders = input_config.max_senders();
-  configuration_range.mean_on_duration = input_config.mean_on_duration();
-  configuration_range.mean_off_duration = input_config.mean_off_duration();
-  //  configuration_range.lo_only = true;
+  configuration_range.link_packets_per_ms = make_pair( input_config.link_ppt().lo(), input_config.link_ppt().hi() );
+  configuration_range.link_ppt_incr = input_config.link_ppt().incr();
+
+  configuration_range.rtt_ms = make_pair( input_config.delay().lo(), input_config.delay().hi() );
+  configuration_range.rtt_incr = input_config.delay().incr();
+
+  configuration_range.num_senders = make_pair( input_config.num_senders().lo(), input_config.num_senders().hi() );
+  configuration_range.senders_incr = input_config.num_senders().incr();
+
+  configuration_range.mean_on_duration = make_pair( input_config.mean_on_duration().lo(), input_config.mean_on_duration().hi() );
+  configuration_range.on_incr = input_config.mean_on_duration().incr();
+
+  configuration_range.mean_off_duration = make_pair( input_config.mean_off_duration().lo(), input_config.mean_off_duration().hi() );
+  configuration_range.off_incr = input_config.mean_off_duration().incr();
   RatBreeder breeder( configuration_range );
 
   unsigned int run = 0;
@@ -84,10 +93,11 @@ int main( int argc, char *argv[] )
   printf( "Optimizing for rtt_ms in [%f, %f]\n",
 	  configuration_range.rtt_ms.first,
 	  configuration_range.rtt_ms.second );
-  printf( "Optimizing for num_senders = 1-%d\n",
-	  configuration_range.max_senders );
-  printf( "Optimizing for mean_on_duration = %f, mean_off_duration = %f\n",
-	  configuration_range.mean_on_duration, configuration_range.mean_off_duration );
+  printf( "Optimizing for num_senders = [%d, %d]\n",
+	  configuration_range.num_senders.first,
+          configuration_range.num_senders.second );
+  printf( "Optimizing for mean_on_duration in [%f, %f], mean_off_duration in [%f, %f]\n",
+	  configuration_range.mean_on_duration.first, configuration_range.mean_on_duration.second, configuration_range.mean_off_duration.first, configuration_range.mean_off_duration.second );
 
   printf( "Initial rules (use if=FILENAME to read from disk): %s\n", whiskers.str().c_str() );
   printf( "#######################\n" );

@@ -1,4 +1,3 @@
-#include "setinputconfig.hh"
 #include <iostream>
 #include <cstdio>
 #include <vector>
@@ -7,74 +6,136 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include "../protobufs/configrange.pb.h"
 using namespace std;
 
+// Parses input arguments, create double range protobuf
+InputConfigRange::DoubleRange set_double_range_protobuf(int argc, char *argv[], string arg_name) {
+  string min_string = "min_" + arg_name + "=";
+  string max_string = "max_" + arg_name + "=";
+  string incr_string = arg_name + "_incr=";
+  int min_size = min_string.size();
+  int max_size = max_string.size();
+  int incr_size = incr_string.size();
+  double min = -1;
+  double max = -1;
+  double incr = 0;
+  for (int i=1; i < argc; i++) {
+    string arg( argv[ i ] );
+    if ( arg.substr( 0, min_size ) == min_string ) {
+     min = atof( arg.substr( min_size ).c_str() );
+     fprintf( stderr, "Setting min of %s to %f\n", arg_name.c_str(), min );
+    } else if ( arg.substr( 0, max_size ) == max_string ) {
+     max = atof( arg.substr( max_size ).c_str() );
+     fprintf( stderr, "Setting max of %s to %f\n", arg_name.c_str(), max );
+    } else if ( arg.substr( 0, incr_size ) == incr_string ) {
+     incr = atof ( arg.substr( incr_size ).c_str() );
+     fprintf( stderr, "Setting incr of %s to %f\n", arg_name.c_str(), incr );
+    }
+  }    
+
+  if ( (min == -1) || (max == -1) ) {
+    fprintf( stderr, "Please provide min, max and incr for %s with %s, %s, %s\n", arg_name.c_str(), min_string.c_str(), max_string.c_str(), incr_string.c_str());
+    exit(1);
+  }
+    
+  if ( ( min != max ) && ( incr == 0 ) ) {
+    fprintf( stderr, "Provide non-zero incr for %s\n", arg_name.c_str());
+    exit(1);
+  }
+    
+  if ( (incr > (max-min)) || (min>max) ) {
+    fprintf( stderr, "Provide valid min and max and incr for %s\n.", arg_name.c_str());
+    exit(1);
+  }
+
+  InputConfigRange::DoubleRange range;
+  range.set_lo(min);
+  range.set_hi(max);
+  range.set_incr(incr);
+  return range;
+}
+
+// Parses command line arguments, creates int range protobuf
+InputConfigRange::IntRange set_int_range_protobuf(int argc, char *argv[], string arg_name) {
+  string min_string = "min_" + arg_name + "=";
+  string max_string = "max_" + arg_name + "=";
+  string incr_string = arg_name + "_incr=";
+  uint32_t min = 0;
+  uint32_t max = 0;
+  uint32_t incr = 0;
+  int min_size = min_string.size();
+  int max_size = max_string.size();
+  int incr_size = incr_string.size();
+  for (int i=1; i < argc; i++) {
+    string arg( argv[ i ] );
+    if ( arg.substr( 0, min_size ) == min_string ) {
+     min = atof( arg.substr( min_size ).c_str() );
+     fprintf( stderr, "Setting min of %s to %d\n", arg_name.c_str(), min );
+    } else if ( arg.substr( 0, max_size ) == max_string ) {
+     max = atof( arg.substr( max_size ).c_str() );
+     fprintf( stderr, "Setting max of %s to %d\n", arg_name.c_str(), max );
+    } else if ( arg.substr( 0, incr_size ) == incr_string ) {
+     incr = atof ( arg.substr( incr_size ).c_str() );
+     fprintf( stderr, "Setting incr of %s to %d\n", arg_name.c_str(), incr );
+    }
+  }
+
+  if ( (min == 0) || (max == 0) ) {
+    fprintf( stderr, "Please provide min, max and incr for %s with %s, %s, %s\n", arg_name.c_str(), min_string.c_str(), max_string.c_str(), incr_string.c_str());
+    exit(1);
+  }
+    
+  if ( ( min != max ) && ( incr == 0 ) ) {
+    fprintf( stderr, "Provide non-zero incr for %s\n", arg_name.c_str());
+    exit(1);
+  }
+    
+  if ( (incr > (max-min)) || (min>max) ) {
+    fprintf( stderr, "Provide valid min and max and incr for %s\n", arg_name.c_str());
+    exit(1);
+  }
+
+  InputConfigRange::IntRange range;
+  range.set_lo(min);
+  range.set_hi(max);
+  range.set_incr(incr);
+  return range;
+}
+
+
 int main(int argc, char *argv[]) {
-  string output_filename;
-  // Network Config Range parameters
-  // Modify the value of these variables
-  // To make a protobuf that supports this config range
-  double min_link_ppt = 0;
-  double max_link_ppt = 0;
-  double min_rtt = 0;
-  double max_rtt = 0;
-  uint32_t min_senders = 0;
-  uint32_t max_senders = 0;
-  double mean_on_duration = 0;
-  double mean_off_duration = 0;
+  string output_filename;  
   bool lo_only = false; 
   for (int i = 1; i < argc; i++) {
     string arg( argv[ i ] );
     if ( arg.substr( 0, 3 ) == "of=") {
       output_filename = string( arg.substr( 3 ) ) + ".pb";
-    } else if ( arg.substr( 0, 9 ) == "min_nsrc=" ) {
-      min_senders = atoi( arg.substr( 9 ).c_str() );
-      fprintf( stderr, "Setting min_senders to %d\n", min_senders );
-    } else if ( arg.substr( 0, 9 ) == "max_nsrc=" ) {
-      max_senders = atoi( arg.substr( 9 ).c_str() );
-      fprintf( stderr, "Setting max_senders to %d\n", max_senders );
-    } else if ( arg.substr( 0, 9 ) == "min_link=" ) {
-      min_link_ppt = atof( arg.substr( 9 ).c_str() );
-      fprintf( stderr, "Setting min_link packets per ms to %f\n", min_link_ppt );
-    } else if ( arg.substr( 0, 9 ) == "max_link=" ) {
-      max_link_ppt = atof( arg.substr( 9 ).c_str() );
-      fprintf( stderr, "Setting max_link packets per ms to %f\n", max_link_ppt );
-    } else if ( arg.substr( 0, 8 ) == "min_rtt=" ) {
-      min_rtt = atof( arg.substr( 8 ).c_str() );
-      fprintf( stderr, "Setting delay to %f ms\n", min_rtt );
-    } else if ( arg.substr( 0, 8 ) == "max_rtt=" ) {
-      max_rtt = atof( arg.substr( 8 ).c_str() );
-      fprintf( stderr, "Setting delay to %f ms\n", max_rtt );
-    } else if ( arg.substr( 0, 3 ) == "on=" ) {
-      mean_on_duration = atof( arg.substr( 3 ).c_str() );
-      fprintf( stderr, "Setting mean_on_duration to %f ms\n", mean_on_duration );
-    } else if ( arg.substr( 0, 4 ) == "off=" ) {
-      mean_off_duration = atof( arg.substr( 4 ).c_str() );
-      fprintf( stderr, "Setting mean_off_duration to %f ms\n", mean_off_duration );
-    }
+    } 
   }
   
-  if ((min_link_ppt == 0 ) || ( max_link_ppt == 0 ) || ( min_rtt == 0 )  || ( max_rtt == 0 ) || ( min_senders == 0 )||( max_senders == 0 ) || ( mean_off_duration == 0 )|| ( mean_on_duration == 0 )) {
-  fprintf( stderr, "Provide min_link=, max_link=, min_rtt=, max_rtt=, min_nsrc=, max_nsrc=, on=, off= arguments. \n");
-  exit( 1 );
-}
-
-  // Creates config range object 
-  InputConfigRange::ConfigRange inputconfig;
-  inputconfig.set_min_link_ppt(min_link_ppt);
-  inputconfig.set_max_link_ppt(max_link_ppt);
-  inputconfig.set_min_rtt(min_rtt);
-  inputconfig.set_max_rtt(max_rtt);
-  inputconfig.set_min_senders(min_senders);
-  inputconfig.set_max_senders(max_senders);
-  inputconfig.set_mean_on_duration(mean_on_duration);
-  inputconfig.set_mean_off_duration(mean_off_duration);
-  inputconfig.set_lo_only(lo_only);
-
   if (output_filename.empty()) {
-    fprintf( stderr, "Provide of=file_name argument.\n" );
+    fprintf( stderr, "Provide of=file_name argument\n" );
     exit ( 1 );
   }
+  // parse all other config range parameters
+  InputConfigRange::DoubleRange link_ppt = set_double_range_protobuf(argc, argv, "link_ppt");
+  InputConfigRange::DoubleRange delay = set_double_range_protobuf(argc, argv, "rtt");
+  InputConfigRange::DoubleRange mean_on_duration = set_double_range_protobuf(argc, argv, "on");
+  InputConfigRange::DoubleRange mean_off_duration = set_double_range_protobuf(argc, argv, "off");
+  InputConfigRange::IntRange num_senders = set_int_range_protobuf(argc, argv, "nsrc");
+  
+
+  // set input config object
+  InputConfigRange::ConfigRange input_config;
+  input_config.mutable_link_ppt()->CopyFrom(link_ppt);
+  input_config.mutable_delay()->CopyFrom(delay);
+  input_config.mutable_mean_on_duration()->CopyFrom(mean_on_duration);
+  input_config.mutable_mean_off_duration()->CopyFrom(mean_off_duration);
+  input_config.mutable_num_senders()->CopyFrom(num_senders);
+  input_config.set_lo_only(lo_only);
+
   char of[ 128 ];
   snprintf( of, 128, "%s", output_filename.c_str());
   int fd = open( of, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR );
@@ -84,7 +145,7 @@ int main(int argc, char *argv[]) {
   }
   
 
-  if ( not inputconfig.SerializeToFileDescriptor( fd ) ) {
+  if ( not input_config.SerializeToFileDescriptor( fd ) ) {
     fprintf( stderr, "Could not serialize InputConfig parameters.\n" );
     exit( 1 );
   }
