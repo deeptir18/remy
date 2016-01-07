@@ -107,11 +107,14 @@ InputConfigRange::IntRange set_int_range_protobuf(int argc, char *argv[], string
 
 int main(int argc, char *argv[]) {
   string output_filename;  
-  bool lo_only = false; 
+  bool infinite_buffers = false;
   for (int i = 1; i < argc; i++) {
     string arg( argv[ i ] );
     if ( arg.substr( 0, 3 ) == "of=") {
       output_filename = string( arg.substr( 3 ) ) + ".pb";
+    }
+    if ( arg == "inf_buffers") {
+      infinite_buffers = true;
     } 
   }
   
@@ -134,7 +137,12 @@ int main(int argc, char *argv[]) {
   input_config.mutable_mean_on_duration()->CopyFrom(mean_on_duration);
   input_config.mutable_mean_off_duration()->CopyFrom(mean_off_duration);
   input_config.mutable_num_senders()->CopyFrom(num_senders);
-  input_config.set_lo_only(lo_only);
+  input_config.set_inf_buffers(infinite_buffers);
+  // if not infinite buffers, check for buffer multiplier
+  if ( !(infinite_buffers) ) {
+    InputConfigRange::IntRange bdp_multiplier = set_int_range_protobuf(argc, argv, "bdp");
+    input_config.mutable_bdp_multiplier()->CopyFrom(bdp_multiplier);
+  }
 
   char of[ 128 ];
   snprintf( of, 128, "%s", output_filename.c_str());

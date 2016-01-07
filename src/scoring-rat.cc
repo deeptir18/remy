@@ -23,7 +23,7 @@ int main(int argc, char *argv[] )
   double delay;
   double mean_on_duration;
   double mean_off_duration;
-
+  unsigned int bdp_multiplier;
   for ( int i = 1; i < argc; i++ ) {
     string arg( argv[ i ] );
     if ( arg.substr( 0, 3 ) == "cf=" ) {
@@ -89,14 +89,18 @@ int main(int argc, char *argv[] )
   link_ppt = test_config.link_ppt();
   delay = test_config.delay();
   num_senders = test_config.num_senders();
-
+  bdp_multiplier = test_config.bdp_multiplier();
+  
   ConfigRange configuration_range;
   configuration_range.link_packets_per_ms = make_pair( link_ppt, link_ppt ); /* 1 Mbps to 10 Mbps */
   configuration_range.rtt_ms = make_pair( delay, delay ); /* ms */
   configuration_range.num_senders = make_pair( num_senders, num_senders );
   configuration_range.mean_on_duration = make_pair( mean_on_duration, mean_on_duration );
   configuration_range.mean_off_duration = make_pair(mean_off_duration, mean_off_duration );
-  configuration_range.lo_only = true;
+  configuration_range.bdp_multiplier = make_pair( bdp_multiplier, bdp_multiplier );
+  if ( bdp_multiplier !=  numeric_limits<int>::max() ) {
+    configuration_range.inf_buffers = false;
+  }
 
   Evaluator eval( whiskers, configuration_range );
   auto outcome = eval.score( {}, false, 10 );

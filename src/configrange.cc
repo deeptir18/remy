@@ -34,10 +34,10 @@ RemyBuffers::ConfigRange ConfigRange::DNA( void ) const
   ret.mutable_link_packets_per_ms()->CopyFrom( pair_to_range( link_packets_per_ms ) );
   ret.mutable_rtt()->CopyFrom( pair_to_range( rtt_ms ) );
   ret.mutable_num_senders()->CopyFrom( pair_to_range( num_senders ) );
-
+  ret.mutable_bdp_multiplier()->CopyFrom( pair_to_range( bdp_multiplier ) );
   ret.mutable_mean_off_duration()->CopyFrom( pair_to_range( mean_on_duration ) );
   ret.mutable_mean_on_duration()->CopyFrom( pair_to_range( mean_off_duration) );
-
+  ret.set_inf_buffers(inf_buffers);
   return ret;
 }
 
@@ -50,5 +50,7 @@ InputConfigRange::ConfigRange ConfigRange::DNA_Config( void ) const
   ret.mutable_num_senders()->CopyFrom( pair_to_int_range( num_senders.first, num_senders.second, senders_incr ) );
   ret.mutable_mean_on_duration()->CopyFrom( pair_to_double_range( mean_on_duration.first, mean_on_duration.second, on_incr ) );
   ret.mutable_mean_off_duration()->CopyFrom( pair_to_double_range( mean_off_duration.first, mean_off_duration.second, off_incr ) );
+  ret.mutable_bdp_multiplier()->CopyFrom( pair_to_int_range( bdp_multiplier.first, bdp_multiplier.second, bdp_incr ) );
+  ret.set_inf_buffers(inf_buffers);
   return ret;
 }

@@ -6,7 +6,8 @@ message ConfigRange {
   optional DoubleRange mean_off_duration = 3;
   optional DoubleRange delay = 4;
   optional IntRange num_senders = 5;;
-  optional bool lo_only = 6;
+  optional IntRange bdp_multiplier = 6;
+  optional bool inf_buffers = 7;
 }
 
 message ConfigVector {
@@ -20,6 +21,7 @@ message NetConfig {
   optional uint32 num_senders = 23;
   optional double link_ppt = 24;
   optional double delay = 25;
+  optional uint32 bdp_multiplier = 26;
 }
 
 message IntRange {

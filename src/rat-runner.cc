@@ -17,6 +17,7 @@ int main( int argc, char *argv[] ) {
   double delay = 100.0;
   double mean_on_duration = 5000.0;
   double mean_off_duration = 5000.0;
+  unsigned int bdp_multiplier = numeric_limits<int>::max();
 
   for ( int i = 1; i < argc; i++ ) {
     string arg( argv[ i ] );
@@ -62,6 +63,9 @@ int main( int argc, char *argv[] ) {
     } else if ( arg.substr( 0, 4 ) == "off=" ) {
       mean_off_duration = atof( arg.substr( 4 ).c_str() );
       fprintf( stderr, "Setting mean_off_duration to %f ms\n", mean_off_duration );
+    } else if ( arg.substr( 0, 4 ) == "bdp=" ) {
+      bdp_multiplier = atoi( arg.substr( 4 ).c_str() );
+      fprintf( stderr, "Setting inf buffers as false and bdp_multiplier to %d\n", bdp_multiplier );
     }
   }
 
@@ -71,7 +75,10 @@ int main( int argc, char *argv[] ) {
   configuration_range.num_senders = make_pair( num_senders, num_senders );
   configuration_range.mean_on_duration = make_pair( mean_on_duration, mean_on_duration );
   configuration_range.mean_off_duration = make_pair(mean_off_duration, mean_off_duration );
-  configuration_range.lo_only = true;
+  configuration_range.bdp_multiplier = make_pair( bdp_multiplier, bdp_multiplier );
+  if ( bdp_multiplier !=  numeric_limits<int>::max() ) {
+    configuration_range.inf_buffers = false;
+  }
 
   Evaluator eval( whiskers, configuration_range );
   auto outcome = eval.score( {}, false, 10 );

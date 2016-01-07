@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <limits>
 #include "../protobufs/configrange.pb.h"
 
 using namespace std;
@@ -21,7 +22,7 @@ int main(int argc, char *argv[]) {
   uint32_t num_senders = 0;
   double mean_on_duration = 0;
   double mean_off_duration = 0;
-
+  uint32_t bdp_multiplier = numeric_limits<int>::max();
   for (int i = 1; i < argc; i++) {
     string arg( argv[ i ] );
     if ( arg.substr( 0, 3 ) == "of=") {
@@ -41,6 +42,9 @@ int main(int argc, char *argv[]) {
     } else if ( arg.substr( 0, 5 ) == "nsrc=" ) {
       num_senders =  atoi( arg.substr( 5 ).c_str() );
       fprintf( stderr, "Setting num_senders to %d\n", num_senders );
+    } else if ( arg.substr( 0, 4 ) == "bdp=" ) {
+      bdp_multiplier = atoi( arg.substr( 4 ).c_str() );
+      fprintf( stderr, "Setting bdp_multiplier to %d\n", bdp_multiplier);
     }
   }
   if ( ( link_ppt == 0 ) || ( delay == 0 ) || ( num_senders == 0 ) || ( mean_on_duration == 0 ) || ( mean_off_duration == 0 ) ) {
@@ -54,7 +58,10 @@ int main(int argc, char *argv[]) {
   test_config.set_num_senders(num_senders);
   test_config.set_mean_on_duration(mean_on_duration);
   test_config.set_mean_off_duration(mean_off_duration);
-
+  test_config.set_bdp_multiplier(bdp_multiplier);
+  if ( (bdp_multiplier == std::numeric_limits<int>::max() ) ) {
+    fprintf(stderr, "Using infinite buffers. To provide a buffer size a multiple of the bdp, provide a bdp= argument.\n");
+  }
   if (output_filename.empty()) {
     fprintf( stderr, "Provide of=file_name argument.\n" );
     exit ( 1 );

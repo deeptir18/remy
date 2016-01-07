@@ -17,30 +17,19 @@ Evaluator::Evaluator( const WhiskerTree & s_whiskers, const ConfigRange & range 
       for (unsigned int senders = range.num_senders.first; senders <= range.num_senders.second; senders += range.senders_incr) {
         for (double on = range.mean_on_duration.first; on <= range.mean_on_duration.second; on += range.on_incr) {
           for (double off = range.mean_off_duration.first; off <= range.mean_off_duration.second; off += range.off_incr) {
-            _configs.push_back( NetConfig().set_link_ppt( link_ppt ).set_delay( rtt ).set_num_senders( senders ).set_on_duration( on ).set_off_duration(off) );
-  
-            if ( ( range.mean_off_duration.first == range.mean_off_duration.second ) || ( range.off_incr == 0 ) ) {
-              break;
-            }  
+            for (unsigned int bdp = range.bdp_multiplier.first; bdp <= range.bdp_multiplier.second; bdp += range.bdp_incr) {
+              _configs.push_back( NetConfig().set_link_ppt( link_ppt ).set_delay( rtt ).set_num_senders( senders ).set_on_duration( on ).set_off_duration(off).set_bdp_multiplier( bdp ) );
+              if ( ( range.bdp_multiplier.first == range.bdp_multiplier.second) || (range.bdp_incr == 0) ) { break; }
+            }
+            if ( ( range.mean_off_duration.first == range.mean_off_duration.second ) || ( range.off_incr == 0 ) ) { break; }
           }
-
-          if ( ( range.mean_on_duration.first == range.mean_on_duration.second ) || ( range.on_incr == 0 ) ) {
-            break;
-          }  
+          if ( ( range.mean_on_duration.first == range.mean_on_duration.second ) || ( range.on_incr == 0 ) ) { break; }
         }
-
-        if ( ( range.num_senders.first == range.num_senders.second ) || ( range.senders_incr == 0 ) ) {
-          break;
-        }
+        if ( ( range.num_senders.first == range.num_senders.second ) || ( range.senders_incr == 0 ) ) { break; }
       }
-
-      if ( ( range.rtt_ms.first == range.rtt_ms.second ) || ( range.rtt_incr == 0 ) ) {
-        break;
-      }
+      if ( ( range.rtt_ms.first == range.rtt_ms.second ) || ( range.rtt_incr == 0 ) ) { break; }
     }
-    if ( ( range.link_packets_per_ms.first == range.link_packets_per_ms.second ) || ( range.link_ppt_incr == 0 ) ) {
-      break;
-    }
+    if ( ( range.link_packets_per_ms.first == range.link_packets_per_ms.second ) || ( range.link_ppt_incr == 0 ) ) { break; }
   }
   
   

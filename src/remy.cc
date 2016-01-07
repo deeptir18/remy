@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
+#include <limits>
 #include "ratbreeder.hh"
 #include "configrange.pb.h"
 #include "configrange.hh"
@@ -82,6 +82,14 @@ int main( int argc, char *argv[] )
 
   configuration_range.mean_off_duration = make_pair( input_config.mean_off_duration().lo(), input_config.mean_off_duration().hi() );
   configuration_range.off_incr = input_config.mean_off_duration().incr();
+
+  // for the case of finite buffers, set the buffer size for the configuration range
+  configuration_range.inf_buffers = input_config.inf_buffers();
+  if (!(configuration_range.inf_buffers)) {
+    // set the bdp_multiplier range to the given range
+    configuration_range.bdp_multiplier = make_pair( input_config.bdp_multiplier().lo(), input_config.bdp_multiplier().hi() );
+    configuration_range.bdp_incr = input_config.bdp_multiplier().incr();
+  }
   RatBreeder breeder( configuration_range );
 
   unsigned int run = 0;
@@ -98,7 +106,13 @@ int main( int argc, char *argv[] )
           configuration_range.num_senders.second );
   printf( "Optimizing for mean_on_duration in [%f, %f], mean_off_duration in [%f, %f]\n",
 	  configuration_range.mean_on_duration.first, configuration_range.mean_on_duration.second, configuration_range.mean_off_duration.first, configuration_range.mean_off_duration.second );
-
+  if (!(configuration_range.inf_buffers)) {
+    printf( "Optimizing for bdp_multiplier_range = [%d, %d]\n",
+          configuration_range.bdp_multiplier.first,
+          configuration_range.bdp_multiplier.second );
+  } else {
+    printf( "Optimizing for infinitely sized buffers. \n");
+  }
   printf( "Initial rules (use if=FILENAME to read from disk): %s\n", whiskers.str().c_str() );
   printf( "#######################\n" );
 
