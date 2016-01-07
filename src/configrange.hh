@@ -12,8 +12,7 @@ public:
   std::pair< unsigned int, unsigned int > num_senders { 1, 16 };
   std::pair< double, double > mean_on_duration { 1000, 1000 };
   std::pair< double, double > mean_off_duration { 1000, 1000 };
-  std::pair< unsigned int, unsigned int > bdp_multiplier { std::numeric_limits<int>::max(), std::numeric_limits<int>::max() };
-  bool inf_buffers { true };
+  std::pair< unsigned int, unsigned int > bdp_multiplier { std::numeric_limits<unsigned int>::max(), std::numeric_limits<unsigned int>::max() };
   double link_ppt_incr { 0 };
   unsigned int senders_incr { 0 };
   double rtt_incr { 0 };

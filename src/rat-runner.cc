@@ -17,7 +17,7 @@ int main( int argc, char *argv[] ) {
   double delay = 100.0;
   double mean_on_duration = 5000.0;
   double mean_off_duration = 5000.0;
-  unsigned int bdp_multiplier = numeric_limits<int>::max();
+  unsigned int bdp_multiplier = numeric_limits<unsigned int>::max();
 
   for ( int i = 1; i < argc; i++ ) {
     string arg( argv[ i ] );
@@ -76,9 +76,6 @@ int main( int argc, char *argv[] ) {
   configuration_range.mean_on_duration = make_pair( mean_on_duration, mean_on_duration );
   configuration_range.mean_off_duration = make_pair(mean_off_duration, mean_off_duration );
   configuration_range.bdp_multiplier = make_pair( bdp_multiplier, bdp_multiplier );
-  if ( bdp_multiplier !=  numeric_limits<int>::max() ) {
-    configuration_range.inf_buffers = false;
-  }
 
   Evaluator eval( whiskers, configuration_range );
   auto outcome = eval.score( {}, false, 10 );

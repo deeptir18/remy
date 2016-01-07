@@ -25,7 +25,7 @@ public:
       num_senders( 8 ),
       link_ppt( 1.0 ),
       delay( 150 ),
-      bdp_multiplier( std::numeric_limits<int>::max() )
+      bdp_multiplier( std::numeric_limits<unsigned int>::max() )
 
   {}
 

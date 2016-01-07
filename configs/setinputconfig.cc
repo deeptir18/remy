@@ -137,10 +137,17 @@ int main(int argc, char *argv[]) {
   input_config.mutable_mean_on_duration()->CopyFrom(mean_on_duration);
   input_config.mutable_mean_off_duration()->CopyFrom(mean_off_duration);
   input_config.mutable_num_senders()->CopyFrom(num_senders);
-  input_config.set_inf_buffers(infinite_buffers);
+
+  InputConfigRange::IntRange bdp_multiplier;
   // if not infinite buffers, check for buffer multiplier
   if ( !(infinite_buffers) ) {
-    InputConfigRange::IntRange bdp_multiplier = set_int_range_protobuf(argc, argv, "bdp");
+    bdp_multiplier = set_int_range_protobuf(argc, argv, "bdp");
+    input_config.mutable_bdp_multiplier()->CopyFrom(bdp_multiplier);
+  } else {
+    // set default as infinite buffers
+    bdp_multiplier.set_lo(std::numeric_limits<unsigned int>::max());
+    bdp_multiplier.set_hi(std::numeric_limits<unsigned int>::max());
+    bdp_multiplier.set_incr(0);
     input_config.mutable_bdp_multiplier()->CopyFrom(bdp_multiplier);
   }
 

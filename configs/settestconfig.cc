@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
   uint32_t num_senders = 0;
   double mean_on_duration = 0;
   double mean_off_duration = 0;
-  uint32_t bdp_multiplier = numeric_limits<int>::max();
+  uint32_t bdp_multiplier = numeric_limits<unsigned int>::max();
   for (int i = 1; i < argc; i++) {
     string arg( argv[ i ] );
     if ( arg.substr( 0, 3 ) == "of=") {

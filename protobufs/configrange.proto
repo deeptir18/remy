@@ -7,7 +7,6 @@ message ConfigRange {
   optional DoubleRange delay = 4;
   optional IntRange num_senders = 5;;
   optional IntRange bdp_multiplier = 6;
-  optional bool inf_buffers = 7;
 }
 
 message ConfigVector {
