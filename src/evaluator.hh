@@ -33,8 +33,10 @@ private:
   std::vector< NetConfig > _configs;
 
 public:
-  Evaluator( const ConfigRange & range );
+  Evaluator( const ConfigRange & range, bool is_range );
   
+  //Evaluator( const ConfigVector & net_configs );
+
   ProblemBuffers::Problem DNA( const WhiskerTree & whiskers ) const;
 
   Outcome score( WhiskerTree & run_whiskers,

@@ -9,10 +9,11 @@
 
 const unsigned int TICK_COUNT = 1000000;
 
-Evaluator::Evaluator( const ConfigRange & range )
+Evaluator::Evaluator( const ConfigRange & range, bool is_range )
   : _prng_seed( global_PRNG()() ), /* freeze the PRNG seed for the life of this Evaluator */
     _configs()
 {
+  if (is_range) {
   // add configs from every point in the cube of configs
   for (double link_ppt = range.link_ppt.low; link_ppt <= range.link_ppt.high; link_ppt += range.link_ppt.incr) {
     for (double rtt = range.rtt.high; rtt <= range.rtt.high; rtt += range.rtt.incr) {
@@ -27,11 +28,17 @@ Evaluator::Evaluator( const ConfigRange & range )
           }
           if ( range.mean_on_duration.isOne() ) { break; }
         }
-        if ( range.num_senders.isOne() ) { break; }
+          if ( range.num_senders.isOne() ) { break; }
+        }
+        if ( range.rtt.isOne() ) { break; }
       }
-      if ( range.rtt.isOne() ) { break; }
+      if ( range.link_ppt.isOne() ) { break; }
     }
-    if ( range.link_ppt.isOne() ) { break; }
+  } else {
+    // case where range is actually a set of config points
+    for ( auto &config : range.configs ) {
+      _configs.push_back( config ); 
+    }
   }
 }
 

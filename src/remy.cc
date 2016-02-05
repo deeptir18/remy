@@ -17,6 +17,8 @@ int main( int argc, char *argv[] )
   string output_filename;
   RemyBuffers::ConfigRange input_config;
   string config_filename;
+  RemyBuffers::ConfigVector input_nets;
+  bool input_pts = false; // if the user provides an input tht is a vector of points
 
   for ( int i = 1; i < argc; i++ ) {
     string arg( argv[ i ] );
@@ -56,44 +58,70 @@ int main( int argc, char *argv[] )
         perror( "close" );
         exit( 1 );
       }
+    } else if ( arg.substr(0, 4 ) == "pcf=" ) {
+      input_pts = false;
+      config_filename = string( arg.substr( 4 ) );
+      int pfd = open( config_filename.c_str(), O_RDONLY );
+      if ( pfd < 0 ) {
+        perror( "open config file error");
+        exit( 1 );
+      }
+      if ( !input_nets.ParseFromFileDescriptor( pfd ) ) {
+        fprintf( stderr, "Could not parse input config vector of pts from file %s. \n", config_filename.c_str() );
+        exit ( 1 );
+      }
+      if ( close( pfd ) < 0 ) {
+        perror( "close" );
+        exit( 1 );
+      }
     } 
   }
 
   if ( config_filename.empty() ) {
-    fprintf( stderr, "Provide an input config protobuf (generated using './configure'). \n");
+    fprintf( stderr, "Provide an input config range or points protobuf (generated using './configure'). \n");
     exit ( 1 );
   }
 
 
   ConfigRange configuration_range;
-  
-  configuration_range.link_ppt = Range( input_config.link_packets_per_ms() );
-  configuration_range.rtt = Range( input_config.rtt() ); 
-  configuration_range.num_senders = Range( input_config.num_senders() ); 
-  configuration_range.mean_on_duration = Range( input_config.mean_on_duration() ); 
-  configuration_range.mean_off_duration = Range( input_config.mean_off_duration() );
-  configuration_range.buffer_size = Range( input_config.buffer_size() ); 
-
+  if (input_pts) {
+    for (int i = 0; i < input_nets.config_size(); i++ ) {
+      const RemyBuffers::NetConfig &config = input_nets.config(i);
+      configuration_range.configs.push_back( NetConfig().set_link_ppt( config.link_ppt() ).set_delay( config.delay() ).set_num_senders( config.num_senders() ).set_on_duration( config.mean_on_duration() ).set_off_duration( config.mean_off_duration() ).set_buffer_size( config.buffer_size() ) );
+    configuration_range.is_range = false;
+    }
+  } else { 
+    configuration_range.link_ppt = Range( input_config.link_packets_per_ms() );
+    configuration_range.rtt = Range( input_config.rtt() ); 
+    configuration_range.num_senders = Range( input_config.num_senders() ); 
+    configuration_range.mean_on_duration = Range( input_config.mean_on_duration() ); 
+    configuration_range.mean_off_duration = Range( input_config.mean_off_duration() );
+    configuration_range.buffer_size = Range( input_config.buffer_size() ); 
+  }
   RatBreeder breeder( configuration_range );
   unsigned int run = 0;
-
-  printf( "#######################\n" );
-  printf( "Optimizing for link packets_per_ms in [%f, %f]\n",
+  if ( !( input_pts ) ) {
+    printf( "#######################\n" );
+    printf( "Optimizing for link packets_per_ms in [%f, %f]\n",
 	  configuration_range.link_ppt.low,
 	  configuration_range.link_ppt.high );
-  printf( "Optimizing for rtt_ms in [%f, %f]\n",
+    printf( "Optimizing for rtt_ms in [%f, %f]\n",
 	  configuration_range.rtt.low,
 	  configuration_range.rtt.high );
-  printf( "Optimizing for num_senders in [%f, %f]\n",
+    printf( "Optimizing for num_senders in [%f, %f]\n",
 	  configuration_range.num_senders.low, configuration_range.num_senders.high );
-  printf( "Optimizing for mean_on_duration in [%f, %f], mean_off_duration in [ %f, %f]\n",
-	  configuration_range.mean_on_duration.low, configuration_range.mean_on_duration.high, configuration_range.mean_off_duration.low, configuration_range.mean_off_duration.high );
-  if ( configuration_range.buffer_size.low != numeric_limits<unsigned int>::max() ) {
-    printf( "Optimizing for buffer_size in [%f, %f]\n",
-            configuration_range.buffer_size.low,
-            configuration_range.buffer_size.high );
-  } else {
-    printf( "Optimizing for infinitely sized buffers. \n");
+    printf( "Optimizing for mean_on_duration in [%f, %f], mean_off_duration in [ %f, %f]\n",
+       	  configuration_range.mean_on_duration.low, configuration_range.mean_on_duration.high, configuration_range.mean_off_duration.low, configuration_range.mean_off_duration.high );
+    if ( configuration_range.buffer_size.low != numeric_limits<unsigned int>::max() ) {
+      printf( "Optimizing for buffer_size in [%f, %f]\n",
+              configuration_range.buffer_size.low,
+              configuration_range.buffer_size.high );
+    } else {
+      printf( "Optimizing for infinitely sized buffers. \n");
+    }
+
+  }  else {
+    printf( "Optimizing for a specific set of networks specified, not a range" );
   }
   printf( "Initial rules (use if=FILENAME to read from disk): %s\n", whiskers.str().c_str() );
   printf( "#######################\n" );

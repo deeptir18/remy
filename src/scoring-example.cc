@@ -74,7 +74,7 @@ int main( int argc, char *argv[] )
   configuration_range.mean_on_duration = Range(mean_on_duration, mean_on_duration, 0);
   configuration_range.mean_off_duration = Range(mean_off_duration, mean_off_duration, 0);
 
-  Evaluator eval( configuration_range );
+  Evaluator eval( configuration_range, configuration_range.is_range );
 
   // save problem to file
   ProblemBuffers::Problem serialized_problem = eval.DNA( whiskers );

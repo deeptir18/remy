@@ -2,6 +2,9 @@
 #define CONFIG_RANGE_HH
 
 #include "dna.pb.h"
+#include "network.hh"
+#include <vector>
+
 class Range
 {
 public:
@@ -33,6 +36,16 @@ public:
   }
 };
 
+class ConfigVector
+{
+public:
+  std::vector< NetConfig > configs = std::vector< NetConfig >();
+  ConfigVector ( void )
+    : configs( std::vector< NetConfig >() )
+   {}
+};
+
+
 class ConfigRange
 {
 public:
@@ -42,8 +55,11 @@ public:
   Range mean_off_duration = Range();
   Range num_senders = Range();
   Range buffer_size = Range();
- 
+
+  std::vector< NetConfig > configs = std::vector< NetConfig >(); 
+  bool is_range = true; // if false, the config is actually a set of points and configs is not null
   RemyBuffers::ConfigRange DNA( void ) const;
 };
+
 
 #endif  // CONFIG_RANGE_HH

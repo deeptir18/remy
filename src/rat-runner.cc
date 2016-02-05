@@ -72,7 +72,7 @@ int main( int argc, char *argv[] )
   configuration_range.num_senders = Range(num_senders, num_senders, 0 );
   configuration_range.mean_on_duration = Range(mean_on_duration, mean_on_duration, 0);
   configuration_range.mean_off_duration = Range(mean_off_duration, mean_off_duration, 0);
-  Evaluator eval( configuration_range );
+  Evaluator eval( configuration_range, configuration_range.is_range );
   auto outcome = eval.score( whiskers, false, 10 );
   printf( "score = %f\n", outcome.score );
   double norm_score = 0;
