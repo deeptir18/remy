@@ -59,7 +59,7 @@ int main( int argc, char *argv[] )
         exit( 1 );
       }
     } else if ( arg.substr(0, 4 ) == "pcf=" ) {
-      input_pts = false;
+      input_pts = true;
       config_filename = string( arg.substr( 4 ) );
       int pfd = open( config_filename.c_str(), O_RDONLY );
       if ( pfd < 0 ) {
@@ -84,11 +84,16 @@ int main( int argc, char *argv[] )
 
 
   ConfigRange configuration_range;
+  printf(" The input pts has size %d\n, ", input_nets.config_size() );
   if (input_pts) {
     for (int i = 0; i < input_nets.config_size(); i++ ) {
       const RemyBuffers::NetConfig &config = input_nets.config(i);
       configuration_range.configs.push_back( NetConfig().set_link_ppt( config.link_ppt() ).set_delay( config.delay() ).set_num_senders( config.num_senders() ).set_on_duration( config.mean_on_duration() ).set_off_duration( config.mean_off_duration() ).set_buffer_size( config.buffer_size() ) );
     configuration_range.is_range = false;
+    }
+    cout <<  configuration_range.configs.size() << "\n";
+    for ( auto &config : configuration_range.configs ) {
+      printf( " NUM SENDERS for the things are %f \n", config.num_senders );
     }
   } else { 
     configuration_range.link_ppt = Range( input_config.link_packets_per_ms() );
