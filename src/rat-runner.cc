@@ -8,17 +8,17 @@
 
 #include "evaluator.hh"
 #include "configrange.hh"
+#include "network.hh"
+
+
 using namespace std;
 
 int main( int argc, char *argv[] )
 {
   WhiskerTree whiskers;
-  unsigned int num_senders = 2;
-  double link_ppt = 1.0;
-  double delay = 100.0;
-  double mean_on_duration = 5000.0;
-  double mean_off_duration = 5000.0;
-
+  RemyBuffers::ConfigVector input_nets;
+  string networks_filename;
+  bool provided_dna = false; 
   for ( int i = 1; i < argc; i++ ) {
     string arg( argv[ i ] );
     if ( arg.substr( 0, 3 ) == "if=" ) {
@@ -34,6 +34,7 @@ int main( int argc, char *argv[] )
 	fprintf( stderr, "Could not parse %s.\n", filename.c_str() );
 	exit( 1 );
       }
+      provided_dna = true;
       whiskers = WhiskerTree( tree );
 
       if ( close( fd ) < 0 ) {
@@ -48,31 +49,45 @@ int main( int argc, char *argv[] )
       if ( tree.has_optimizer() ) {
 	printf( "Remy optimization settings:\n%s\n\n", tree.optimizer().DebugString().c_str() );
       }
-    } else if ( arg.substr( 0, 5 ) == "nsrc=" ) {
-      num_senders = atoi( arg.substr( 5 ).c_str() );
-      fprintf( stderr, "Setting num_senders to %d\n", num_senders );
-    } else if ( arg.substr( 0, 5 ) == "link=" ) {
-      link_ppt = atof( arg.substr( 5 ).c_str() );
-      fprintf( stderr, "Setting link packets per ms to %f\n", link_ppt );
-    } else if ( arg.substr( 0, 4 ) == "rtt=" ) {
-      delay = atof( arg.substr( 4 ).c_str() );
-      fprintf( stderr, "Setting delay to %f ms\n", delay );
-    } else if ( arg.substr( 0, 3 ) == "on=" ) {
-      mean_on_duration = atof( arg.substr( 3 ).c_str() );
-      fprintf( stderr, "Setting mean_on_duration to %f ms\n", mean_on_duration );
-    } else if ( arg.substr( 0, 4 ) == "off=" ) {
-      mean_off_duration = atof( arg.substr( 4 ).c_str() );
-      fprintf( stderr, "Setting mean_off_duration to %f ms\n", mean_off_duration );
-    }
+    } else if ( arg.substr( 0, 8 ) == "pts_cfg=" ) {
+        networks_filename = string( arg.substr( 8 ) ) ;
+        int cfd = open ( networks_filename.c_str(), O_RDONLY );
+        if ( cfd < 0 ) {
+          perror( "open" );
+          exit( 1 );
+        }
+        if ( !input_nets.ParseFromFileDescriptor( cfd ) ) {
+          fprintf( stderr, "Could not parse input config vector of pts from file %s. \n", networks_filename.c_str() );
+          exit ( 1 );
+        }
+        if ( close( cfd ) < 0 ) {
+          perror( "close" );
+          exit( 1 );
+        }
+     }
   }
 
+
+  if ( networks_filename.empty() ) {
+    fprintf( stderr, "Provide an input config points protobuf. \n");
+    exit ( 1 );
+  }
+
+  if ( ! (provided_dna) ) {
+    fprintf( stderr, "Provide an input dna file. \n");
+    exit ( 1 );
+  }
+
+
   ConfigRange configuration_range;
-  configuration_range.link_ppt = Range( link_ppt,link_ppt, 0 ); /* 1 Mbps to 10 Mbps */
-  configuration_range.rtt = Range( delay, delay, 0 ); /* ms */
-  configuration_range.num_senders = Range(num_senders, num_senders, 0 );
-  configuration_range.mean_on_duration = Range(mean_on_duration, mean_on_duration, 0);
-  configuration_range.mean_off_duration = Range(mean_off_duration, mean_off_duration, 0);
+  for (int i = 0; i < input_nets.config_size(); i++ ) {
+      const RemyBuffers::NetConfig &config = input_nets.config(i);
+      configuration_range.configs.push_back( NetConfig().set_link_ppt( config.link_ppt() ).set_delay( config.delay() ).set_num_senders( config.num_senders() ).set_on_duration( config.mean_on_duration() ).set_off_duration( config.mean_off_duration() ).set_buffer_size( config.buffer_size() ) );
+    configuration_range.is_range = false;
+
+  }
   Evaluator eval( configuration_range, configuration_range.is_range );
+
   auto outcome = eval.score( whiskers, false, 10 );
   printf( "score = %f\n", outcome.score );
   double norm_score = 0;
