@@ -11,9 +11,8 @@ private:
   double _tick_share_sending;
   unsigned int _packets_received;
   double _total_delay;
-  int _latest_seqnum;
 public:
-  Utility( void ) : _tick_share_sending( 0 ), _packets_received( 0 ), _total_delay( 0 ), _latest_seqnum( -1 ) {}
+  Utility( void ) : _tick_share_sending( 0 ), _packets_received( 0 ), _total_delay( 0 ) {}
 
   void sending_duration( const double & duration, const unsigned int num_sending ) { _tick_share_sending += duration / double( num_sending ); }
   void packets_received( const std::vector< Packet > & packets ) {
@@ -21,13 +20,7 @@ public:
 
     for ( auto &x : packets ) {
       assert( x.tick_received >= x.tick_sent );
-      // check if this packet indicates a loss received
-      if  ( x.seq_num > (_latest_seqnum  + 1) ) {
-        _total_delay += (_latest_seqnum - x.seq_num)*(x.tick_received - x.tick_sent);
-      } else {
-	_total_delay += x.tick_received - x.tick_sent;
-      }
-      _latest_seqnum = x.seq_num;
+      _total_delay += x.tick_received - x.tick_sent;
     }
   }
 
