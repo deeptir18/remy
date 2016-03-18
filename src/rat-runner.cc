@@ -86,7 +86,7 @@ int main( int argc, char *argv[] )
     }
   }
 
-
+  printf( "normalized_score = %f\n", norm_score );
   printf( "Whiskers: %s\n", outcome.used_whiskers.str().c_str() );
 
   return 0;
