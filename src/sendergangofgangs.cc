@@ -70,6 +70,16 @@ vector< pair< double, double > > SenderGangofGangs<Sender1,Sender2>::throughputs
 }
 
 template <class Sender1, class Sender2>
+vector< double > SenderGangofGangs<Sender1,Sender2>::percent_lost( void ) const
+{
+  auto ret = gang1_.percent_lost();
+  const auto gang2_pl = gang2_.percent_lost();
+
+  ret.insert(ret.end(), gang2_pl.begin(), gang2_pl.end() );
+  return ret;
+}
+
+template <class Sender1, class Sender2>
 double SenderGangofGangs<Sender1,Sender2>::next_event_time( const double & tickno ) const
 {
   return min( gang1_.next_event_time( tickno ), gang2_.next_event_time( tickno ) );

@@ -32,7 +32,7 @@ public:
   double utility( void ) const;
 
   std::vector< std::pair< double, double > > throughputs_delays( void ) const;
-
+  std::vector< double >  percent_lost( void ) const;
   double next_event_time( const double & tickno ) const;
 };
 

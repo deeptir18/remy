@@ -75,6 +75,7 @@ AnswerBuffers::Outcome Evaluator::Outcome::DNA( void ) const
 
 Evaluator::Outcome::Outcome( const AnswerBuffers::Outcome & dna )
   : score( dna.score() ),
+    percent_lost(),
     throughputs_delays(),
     used_whiskers()
 {
@@ -114,6 +115,7 @@ Evaluator::Outcome Evaluator::score( WhiskerTree & run_whiskers,
     
     the_outcome.score += network1.senders().utility();
     the_outcome.throughputs_delays.emplace_back( x, network1.senders().throughputs_delays() );
+    the_outcome.percent_lost.emplace_back( x, network1.senders().percent_lost() );
   }
 
   the_outcome.used_whiskers = run_whiskers;
