@@ -17,10 +17,11 @@ public:
   {
   public:
     double score;
+    std::vector< std::pair< NetConfig, std::vector< double > > > percent_lost; // percent of packets lost in 1 round of evaluation; used for scoring
     std::vector< std::pair< NetConfig, std::vector< std::pair< double, double > > > > throughputs_delays;
     WhiskerTree used_whiskers;
 
-    Outcome() : score( 0 ), throughputs_delays(), used_whiskers() {}
+    Outcome() : score( 0 ), percent_lost(), throughputs_delays(), used_whiskers() {}
 
     Outcome( const AnswerBuffers::Outcome & dna );
 

@@ -77,7 +77,12 @@ int main( int argc, char *argv[] )
   auto outcome = eval.score( whiskers, false, 10 );
   printf( "score = %f\n", outcome.score );
   double norm_score = 0;
-
+  for (auto &run : outcome.percent_lost ) {
+    printf( "===\nconfig: %s\n", run.first.str().c_str() );
+    for ( auto &x : run.second ) { 
+      printf( "sender:[percent_lost=%f]\n", x );
+    }
+  }
   for ( auto &run : outcome.throughputs_delays ) {
     printf( "===\nconfig: %s\n", run.first.str().c_str() );
     for ( auto &x : run.second ) {
