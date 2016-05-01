@@ -20,8 +20,8 @@ public:
     for ( auto &x : packets ) {
       assert( x.tick_received >= x.tick_sent );
       _total_delay += x.tick_received - x.tick_sent;
+      }
     }
-  }
 
   double average_throughput( void ) const
   {
