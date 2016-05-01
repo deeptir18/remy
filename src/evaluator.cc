@@ -120,5 +120,4 @@ Evaluator::Outcome Evaluator::score( WhiskerTree & run_whiskers,
 
   the_outcome.used_whiskers = run_whiskers;
 
-  return the_outcome;
-}
+  return the_outcome;}

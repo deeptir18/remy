@@ -1,5 +1,7 @@
 #include "sendergang.hh"
-
+#include <string>
+#include <random>
+#include "random.hh"
 using namespace std;
 
 template <class SenderType>
@@ -151,10 +153,18 @@ template <class SenderType>
 void SenderGang<SenderType>::SwitchedSender::receive_feedback( Receiver & rec )
 {
   if ( rec.readable( id ) ) {
+    std::vector< Packet > new_packets;
     const std::vector< Packet > & packets = rec.packets_for( id );
-
-    utility.packets_received( packets );
-    sender.packets_received( packets );
+    new_packets = std::vector< Packet >();
+    bernoulli_distribution d(0.10);
+    for (const auto &x: packets) {
+      if (!( d ( prng ) )) {
+        new_packets.push_back(x);
+      }
+    }
+    const std::vector< Packet > &less_packets = new_packets;
+    utility.packets_received( less_packets );
+    sender.packets_received( less_packets );
 
     rec.clear( id );
   }

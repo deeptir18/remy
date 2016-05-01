@@ -31,7 +31,6 @@ public:
       _total_delay += ( x.tick_received - x.tick_sent ) * outstanding_pkts;
       _lost_so_far += outstanding_pkts - 1; // add in all lost except one that was just received
       _total_so_far += outstanding_pkts; // add all that should have come
-      _total_delay += x.tick_received - x.tick_sent;
     }
 
    
