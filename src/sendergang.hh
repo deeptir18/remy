@@ -37,7 +37,7 @@ private:
     Utility utility;
     bool sending;
     unsigned int id;
-
+    PRNG prng;
     SwitchedSender( const unsigned int s_id,
 		    const double & start_tick,
 		    const SenderType & s_sender )
@@ -46,7 +46,8 @@ private:
 	sender( s_sender ),
 	utility(),
 	sending( false ),
-	id( s_id )
+	id( s_id ),
+        prng( global_PRNG()() )
     {}
     virtual ~SwitchedSender() {};
   };
