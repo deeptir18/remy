@@ -99,7 +99,8 @@ message ConfigRange {
   optional Range buffer_size = 74;
   optional Range mean_off_duration = 75;
   optional Range mean_on_duration = 76;
-  optional uint32 simulation_ticks = 77;
+  optional uint32 utility_penalty = 77;
+  optional uint32 simulation_ticks = 78;
 }
 
 message NetConfig {
@@ -109,6 +110,7 @@ message NetConfig {
   optional double link_ppt = 4;
   optional double delay = 5;
   optional uint32 buffer_size = 6;
+  optional double utility_penalty = 7;
 }
 
 message ConfigVector {

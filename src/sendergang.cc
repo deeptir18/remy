@@ -8,6 +8,7 @@ template <class SenderType, class SwitcherType>
 SenderGang<SenderType, SwitcherType>::SenderGang( const double mean_on_duration,
 						  const double mean_off_duration,
 						  const unsigned int num_senders,
+                                                  const double delay_penalty,
 						  const SenderType & exemplar,
 						  PRNG & prng,
 						  const unsigned int id_range_begin )
@@ -20,6 +21,9 @@ SenderGang<SenderType, SwitcherType>::SenderGang( const double mean_on_duration,
     _gang.emplace_back( i + id_range_begin,
 			_start_distribution.sample( _prng ),
 			exemplar );
+  }
+  for ( auto &x : _gang ) {
+    x.utility.set_delay_penalty( delay_penalty );
   }
 }
 

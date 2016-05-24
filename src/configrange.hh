@@ -42,6 +42,7 @@ public:
   Range mean_off_duration;
   Range num_senders;
   Range buffer_size;
+  double utility_penalty;
   unsigned int simulation_ticks;
 
   ConfigRange( void );

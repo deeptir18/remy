@@ -77,6 +77,8 @@ int main( int argc, char *argv[] )
   printf( "#######################\n" );
   printf( "Evaluator simulations will run for %d ticks\n",
     options.config_range.simulation_ticks );
+  printf( "Using %f as the delay penalty\n",
+    options.config_range.utility_penalty );
   printf( "Optimizing for link packets_per_ms in [%f, %f]\n",
 	  options.config_range.link_ppt.low,
 	  options.config_range.link_ppt.high );

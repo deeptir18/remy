@@ -44,7 +44,7 @@ public:
     : internal_tick( 0 ),
       next_switch_tick( start_tick ),
       sender( s_sender ),
-      utility(),
+      utility( ),
       sending( false ),
       id( s_id )
   {}
@@ -131,6 +131,7 @@ public:
   SenderGang( const double mean_on_duration,
 	      const double mean_off_duration,
 	      const unsigned int num_senders,
+              const double delay_penalty,
 	      const SenderType & exemplar,
 	      PRNG & s_prng,
 	      const unsigned int id_range_begin = 0 );
