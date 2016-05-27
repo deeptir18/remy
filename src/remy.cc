@@ -93,7 +93,6 @@ int main( int argc, char *argv[] )
   }
 
   options.config_range = ConfigRange( input_config );
-
   RatBreeder breeder( options, whisker_options );
 
   unsigned int run = 0;
@@ -103,6 +102,8 @@ int main( int argc, char *argv[] )
     options.config_range.simulation_ticks );
   printf( "Using %f as the delay penalty\n",
     options.config_range.utility_penalty );
+  printf( "Using %f as the stochastic loss rate \n",
+    options.config_range.stochastic_loss_rate );
   printf( "Optimizing window increment: %d, window multiple: %d, intersend: %d\n",
           whisker_options.optimize_window_increment, whisker_options.optimize_window_multiple,
           whisker_options.optimize_intersend);

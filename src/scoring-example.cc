@@ -23,6 +23,7 @@ int main( int argc, char *argv[] )
   bool inf_buffers = true;
   double buffer_size = numeric_limits<unsigned int>::max();
   double utility_penalty = 0;
+  double stochastic_loss_rate = 0;
   for ( int i = 1; i < argc; i++ ) {
     string arg( argv[ i ] );
     if ( arg.substr( 0, 3 ) == "if=" ) {
@@ -74,6 +75,9 @@ int main( int argc, char *argv[] )
     } else if ( arg.substr( 0, 8 ) == "penalty=" ) {
       utility_penalty = atof( arg.substr( 8 ).c_str() );
       fprintf( stderr, "Setting utility penalty to %f \n", utility_penalty );
+    } else if ( arg.substr( 0, 7 ) == "s_loss=" ) {
+      stochastic_loss_rate = atof( arg.substr( 7 ).c_str() );
+      fprintf( stderr, "Setting stochastic loss rate to %f \n", stochastic_loss_rate );
     }
   }
   if ( inf_buffers ) {
@@ -87,6 +91,7 @@ int main( int argc, char *argv[] )
   configuration_range.mean_off_duration = Range(mean_off_duration, mean_off_duration, 0);
   configuration_range.buffer_size = Range(buffer_size, buffer_size, 0 );
   configuration_range.utility_penalty = utility_penalty;
+  configuration_range.stochastic_loss_rate = stochastic_loss_rate;
   Evaluator< WhiskerTree > eval( configuration_range );
 
   // save problem to file
