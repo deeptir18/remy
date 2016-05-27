@@ -74,7 +74,7 @@ bool update_config_with_range(RemyBuffers::Range * range, int argc,
   return true;
 }
 
-// Parses input arguments, sets a uint32 field.
+// Parses input arguments, sets a double field.
 // If mandatory is false and no input arguments are found, skips and returns false.
 // If the input arugments are invalid, or if mandatory is true and no input arguments
 // are found, calls exit(1).

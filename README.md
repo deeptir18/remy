@@ -27,6 +27,12 @@ Basic usage:
   sender "on" for an exponentially-distributed amount of time (mean 5
   s) and off for durations drawn from the same distribution.
 
+* Use the `cf=` argument to pass in a specific configuration file into Remy. 
+  To create this configuration protobuf, run `./configuration`, with the 
+  specifications about the networks to train over. The configuration executable 
+  takes in information about link speed, delay, on and off times, number of senders, 
+  buffer sizes, utility function loss penalty, and stochastic loss rate.
+
 * Use the of= argument to have Remy save its RemyCCs to disk. It will
   save every step of the iteration.
 

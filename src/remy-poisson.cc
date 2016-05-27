@@ -79,6 +79,8 @@ int main( int argc, char *argv[] )
     options.config_range.simulation_ticks );
   printf( "Using %f as the delay penalty\n",
     options.config_range.utility_penalty );
+  printf( "Using %f as the stochastic loss rate \n",
+    options.config_range.stochastic_loss_rate );
   printf( "Optimizing for link packets_per_ms in [%f, %f]\n",
 	  options.config_range.link_ppt.low,
 	  options.config_range.link_ppt.high );
