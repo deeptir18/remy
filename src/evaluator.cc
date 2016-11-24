@@ -5,7 +5,8 @@
 #include "network.cc"
 #include "rat-templates.cc"
 #include "fish-templates.cc"
-
+#include "aimd-templates.cc"
+#include "polysender-templates.cc"
 template <typename T>
 Evaluator< T >::Evaluator( const ConfigRange & range )
   : _prng_seed( global_PRNG()() ), /* freeze the PRNG seed for the life of this Evaluator */
@@ -74,6 +75,45 @@ ProblemBuffers::Problem Evaluator< FinTree >::DNA( const FinTree & fins ) const
   return ret;
 }
 
+template <>
+Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score_polynomial(
+            const unsigned int prng_seed,
+            const vector<NetConfig> & configs,
+            const unsigned int ticks_to_run )
+{
+  PRNG run_prng( prng_seed );
+  Evaluator::Outcome the_outcome;
+
+  /* run simulation */
+  for ( auto &x : configs ) {
+    Network<SenderGang<PolynomialSender, TimeSwitchedSender<PolynomialSender>>,
+    SenderGang<PolynomialSender, TimeSwitchedSender<PolynomialSender>>> network1( PolynomialSender(), run_prng, x );
+    network1.run_simulation( ticks_to_run );
+    the_outcome.score += network1.senders().utility();
+    the_outcome.throughputs_delays.emplace_back( x, network1.senders().throughputs_delays() );
+  }
+  return the_outcome;
+}
+
+template<>
+Evaluator< FinTree >::Outcome Evaluator< FinTree >::score_polynomial(
+          const unsigned int prng_seed,
+          const vector<NetConfig> & configs,
+          const unsigned int ticks_to_run )
+{
+  PRNG run_prng( prng_seed );
+  Evaluator::Outcome the_outcome;
+
+  /*run simulation*/
+  for ( auto &x : configs ) {
+    Network<SenderGang<PolynomialSender, TimeSwitchedSender<PolynomialSender>>,
+      SenderGang<PolynomialSender, TimeSwitchedSender<PolynomialSender>>> network1( PolynomialSender(), run_prng, x );
+    network1.run_simulation( ticks_to_run );
+    the_outcome.score += network1.senders().utility();
+    the_outcome.throughputs_delays.emplace_back( x, network1.senders().throughputs_delays() );
+  }
+  return the_outcome;
+}
 template <>
 Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score( WhiskerTree & run_whiskers,
              const unsigned int prng_seed,
@@ -200,6 +240,11 @@ typename Evaluator< T >::Outcome Evaluator< T >::score( T & run_actions,
   return score( run_actions, _prng_seed, _configs, trace, _tick_count * carefulness );
 }
 
+template <typename T>
+typename Evaluator< T >::Outcome Evaluator< T >::score_polynomial( const double carefulness ) const
+{
+  return score_polynomial( _prng_seed, _configs, _tick_count * carefulness );
+}
 
 template class Evaluator< WhiskerTree>;
 template class Evaluator< FinTree >;

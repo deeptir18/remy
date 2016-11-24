@@ -47,6 +47,7 @@ int main( int argc, char *argv[] )
   WhiskerTree whiskers;
   FinTree fins;
   bool is_poisson = false;
+  bool is_polynomial = false;
   unsigned int num_senders = 2;
   double link_ppt = 1.0;
   double delay = 100.0;
@@ -64,8 +65,20 @@ int main( int argc, char *argv[] )
           is_poisson = true;
           fprintf( stderr, "Running poisson sender\n" );
         }
-    } 
+    }
   }
+
+  for ( int i = 1; i < argc && !is_polynomial; i++ ) {
+    string arg( argv[ i ] );
+    if ( arg.substr( 0, 7) == "sender=" ) {
+      string sender_type( arg.substr( 7 ) );
+      if ( sender_type == "polynomial" ) {
+        is_polynomial = true;
+        fprintf( stderr, "Running polynomial sender\n" );
+      }
+    }
+  }
+
   for ( int i = 1; i < argc; i++ ) {
      string arg( argv[ i ] );
      if ( arg.substr( 0, 3 ) == "if=" ) {
@@ -138,6 +151,10 @@ int main( int argc, char *argv[] )
   if ( is_poisson ) {
     Evaluator< FinTree > eval( configuration_range );
     auto outcome = eval.score( fins, false, 10 );
+    parse_outcome< Evaluator< FinTree >::Outcome > ( outcome );
+  } else if ( is_polynomial ) {
+    Evaluator< FinTree > eval( configuration_range );
+    auto outcome = eval.score_polynomial( 10 );
     parse_outcome< Evaluator< FinTree >::Outcome > ( outcome );
   } else {
     Evaluator< WhiskerTree > eval( configuration_range );
