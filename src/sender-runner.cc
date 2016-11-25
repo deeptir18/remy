@@ -153,9 +153,9 @@ int main( int argc, char *argv[] )
     auto outcome = eval.score( fins, false, 10 );
     parse_outcome< Evaluator< FinTree >::Outcome > ( outcome );
   } else if ( is_polynomial ) {
-    Evaluator< FinTree > eval( configuration_range );
+    Evaluator< WhiskerTree > eval( configuration_range );
     auto outcome = eval.score_polynomial( 10 );
-    parse_outcome< Evaluator< FinTree >::Outcome > ( outcome );
+    parse_outcome< Evaluator< WhiskerTree >::Outcome > ( outcome );
   } else {
     Evaluator< WhiskerTree > eval( configuration_range );
     auto outcome = eval.score( whiskers, false, 10 );

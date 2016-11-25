@@ -13,6 +13,7 @@ common_source = delay.hh evaluator.cc evaluator.hh                 \
 	senderdatapoint.hh                                             \
 	sendergangofgangs.cc sendergangofgangs.hh                  \
 	utility.hh whisker.cc whisker.hh whiskertree.cc whiskertree.hh \
+	poly.hh                                                 \
 	aimd-templates.cc aimd.cc aimd.hh polysender-templates.cc polysender.cc polysender.hh                              \
 	configrange.hh configrange.cc                              \
 	simulationresults.hh simulationresults.cc                      \
