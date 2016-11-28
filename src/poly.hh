@@ -5,58 +5,64 @@
 #include <cmath>
 using namespace std;
 /*Define a 'PolynomialMapping' per memory signal in question*/
-class PolynomialMapping {
-public:
-  class Polynomial {
+//class PolynomialMapping {
+//public:
+class Polynomial {
   public:
     int _degree;
-    vector< double > _terms;
-    Polynomial( const int degree ) : _degree ( degree ), _terms()
+    int _num_signals;
+    vector< vector< double > > _terms;
+    double _constant;
+    Polynomial( const int degree, const int signals ) : _degree ( degree ), _num_signals( signals ), _terms( _num_signals ), _constant( 0 )
     {
-      // for now just place constants
-      _terms.emplace_back(.01);
-      _terms.emplace_back(.01);
-    }
-    double get_value( const double x )
-    {
-      double ret = 0;
-      for ( int i = 0; i < _degree + 1; i++ ) {
-        ret += ( _terms.at(i)*pow((float)x, (float)i) );
+      // STRUCTURE: each vector has the coefficients ( in order of degree ) for each of the signals
+      for ( int i = 0; i < _num_signals; i++ ) {
+        vector< double > coeffs( _degree );
+        for ( int j = 0; j < _degree; j++ ) {
+          coeffs[j] = .01;
+        }
+        _terms[i] = coeffs;
       }
+    }
+    double get_value( const vector< double > signals )
+    {
+      // order of signals is the same order as the vector of coefficients
+      double ret = 0;
+      assert( (int)signals.size() == _num_signals );
+      for ( int i = 0; i < _num_signals; i++ ) {
+        double x = signals[i];
+        for ( int j = 0; j < _degree; j++ ) {
+          vector< double > coeffs = _terms[i];
+          ret += coeffs[j]*pow((float)x, (float)(j+1));
+        }
+      }
+      ret += _constant;
       return ret;
     }
 
-    void place_val( const int degree, const double val )
+    void place_val( const int degree, const int signal, const double val )
     {
-      _terms[degree] = val;
-    }
-  };
-
-  private:
-    // polynomial for the window increment
-    Polynomial _window_increment_poly;
-
-    // polynomial for the intersend rate
-    Polynomial _intersend_rate_poly;
-
-    // polynomial for the window multiplier
-    Polynomial _window_multiplier_poly;
-
-
-  public:
-    // constructor
-    PolynomialMapping():  _window_increment_poly( Polynomial( 1 ) ), _intersend_rate_poly( Polynomial( 1 ) ), _window_multiplier_poly( Polynomial( 1 ) ) {}
-    double get_window_increment( const double x ) { return _window_increment_poly.get_value( x ); }
-    double get_window_multiplier( const double x ) { return _window_multiplier_poly.get_value( x ); }
-    double get_intersend( const double x ) { return _intersend_rate_poly.get_value( x ); }
-
-    void initialize_vals(const double incr, double intersend, double multiplier)
-    {
-      _window_increment_poly.place_val( 1, incr );
-      _intersend_rate_poly.place_val( 1, intersend );
-      _window_multiplier_poly.place_val( 1, multiplier );
+      if ( degree == 0 ) {
+        _constant = val;
+        return;
+      }
+      vector< double > coeffs = _terms.at(signal);
+      coeffs[degree - 1] = val;
     }
 
+    void initialize_vals( const vector< double > vals )
+    {
+      assert ( (int)vals.size() == _num_signals*_degree );
+      int cur_signal = 0;
+      for ( int i = 0; i < (int)vals.size(); i ++ ) {
+        vector < double > coeffs = _terms[cur_signal];
+        int place = i % ( _degree );
+        coeffs[place] = vals[i];
+        if ( ( i % _degree ) == 0 ) {
+          cur_signal += 1;
+        }
+      }
+    }
 };
 
 #endif /* POLYNOMIAL_HH */

@@ -23,9 +23,12 @@ private:
   int _largest_ack;
 
   // hardcode a polynomial mapping for each memory congestion signal we care about
-  PolynomialMapping _send_ewma_poly;
+  Polynomial _window_increment_poly;
+  Polynomial _window_multiplier_poly;
+  Polynomial _intersend_rate_poly;
+  /*PolynomialMapping _send_ewma_poly;
   PolynomialMapping _rec_ewma_poly;
-  PolynomialMapping _rtt_ratio_poly;
+  PolynomialMapping _rtt_ratio_poly;*/
 
 public:
   PolynomialSender();

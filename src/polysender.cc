@@ -16,15 +16,19 @@ PolynomialSender::PolynomialSender()
      _flow_id( 0 ),
      _memory(),
      _largest_ack( -1 ),
-     _send_ewma_poly( PolynomialMapping() ),
-     _rec_ewma_poly( PolynomialMapping() ),
-     _rtt_ratio_poly( PolynomialMapping() )
+     _window_increment_poly( Polynomial( 1, 3 ) ),
+     _window_multiplier_poly( Polynomial( 1, 3 ) ),
+     _intersend_rate_poly( Polynomial( 1, 3 ) ) // degree 1, uses 3 signals
+
 {
   // initial values for each polynomial
-  // ordererd: increment, intersend, multiplier
-  _send_ewma_poly.initialize_vals(20, 1, .02);
-  _rec_ewma_poly.initialize_vals(30, 1, .03);
-  _rtt_ratio_poly.initialize_vals(40, 1, .04);
+  vector< double > increment, multiplier, intersend;
+  increment.insert(increment.end(), { 20, 30, 40 });
+  multiplier.insert(multiplier.end(), {1, 1, 1});
+  intersend.insert(intersend.end(), {.02, .03, .04});
+  _window_increment_poly.initialize_vals( increment );
+  _window_multiplier_poly.initialize_vals( multiplier );
+  _intersend_rate_poly.initialize_vals( intersend );
 }
 
 void PolynomialSender::packets_received( const vector< Packet > & packets ) {
@@ -47,11 +51,13 @@ void PolynomialSender::reset( const double & )
   _largest_ack = _packets_sent - 1;
    _memory.reset();
   assert( _flow_id != 0 );
-
-  // reset polynomial values
-  _send_ewma_poly.initialize_vals(20, .5, .02);
-  _rec_ewma_poly.initialize_vals(30, .5, .03);
-  _rtt_ratio_poly.initialize_vals(40, .5, .04);
+  vector< double > increment, multiplier, intersend;
+  increment.insert(increment.end(), { 20, 30, 40 });
+  multiplier.insert(multiplier.end(), {1, 1, 1});
+  intersend.insert(intersend.end(), {.02, .03, .04});
+  _window_increment_poly.initialize_vals( increment );
+  _window_multiplier_poly.initialize_vals( multiplier );
+  _intersend_rate_poly.initialize_vals( intersend );
 }
 
 double PolynomialSender::next_event_time( const double & tickno ) const
@@ -74,10 +80,10 @@ void PolynomialSender::update_window( const Memory memory )
   double rec_ewma = (double)(memory.field( 1 ) );
   double send_ewma = (double)(memory.field( 0 ) );
   double rtt_ratio = (double)(memory.field( 2 ) );
-  double window_increment = _send_ewma_poly.get_window_increment( send_ewma ) + _rec_ewma_poly.get_window_increment( rec_ewma ) + _rtt_ratio_poly.get_window_increment( rtt_ratio );
-
-  double window_multiplier = _send_ewma_poly.get_window_multiplier( send_ewma ) + _rec_ewma_poly.get_window_multiplier( rec_ewma ) + _rtt_ratio_poly.get_window_multiplier( rtt_ratio );
-
+  vector < double > signals;
+  signals.insert(signals.end(), {rec_ewma, send_ewma, rtt_ratio} );
+  double window_increment = _window_increment_poly.get_value( signals );
+  double window_multiplier = _window_multiplier_poly.get_value( signals );
   _the_window = min( max( 0, int( _the_window * window_multiplier + window_increment ) ), 1000000 );
 }
 
@@ -86,8 +92,9 @@ void PolynomialSender::update_intersend( const Memory memory )
   double rec_ewma = (double)(memory.field( 1 ) );
   double send_ewma = (double)(memory.field( 0 ) );
   double rtt_ratio = (double)(memory.field( 2 ) );
-
-  double intersend = _send_ewma_poly.get_intersend( send_ewma ) + _rec_ewma_poly.get_intersend( rec_ewma ) + _rtt_ratio_poly.get_intersend( rtt_ratio );
+  vector < double > signals;
+  signals.insert(signals.end(), {rec_ewma, send_ewma, rtt_ratio} );
+  double intersend = _intersend_rate_poly.get_value( signals );
   _intersend_time = intersend;
 
 }
