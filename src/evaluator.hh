@@ -49,6 +49,9 @@ public:
   Outcome score_polynomial(
       const double carefulness = 1) const;
 
+  Outcome score_lerp(
+      const double carefulness = 1) const;
+
   static Evaluator::Outcome parse_problem_and_evaluate( const ProblemBuffers::Problem & problem );
 
   static Outcome score( T & run_actions,
@@ -61,6 +64,12 @@ public:
       const unsigned int prng_seed,
       const std::vector<NetConfig> & configs,
       const unsigned int ticks_to_run );
+
+  static Outcome score_lerp(
+      const unsigned int prng_seed,
+      const std::vector<NetConfig> & configs,
+      const unsigned int ticks_to_run );
+
 };
 
 #endif

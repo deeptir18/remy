@@ -48,6 +48,7 @@ int main( int argc, char *argv[] )
   FinTree fins;
   bool is_poisson = false;
   bool is_polynomial = false;
+  bool is_lerp = false;
   unsigned int num_senders = 2;
   double link_ppt = 1.0;
   double delay = 100.0;
@@ -75,6 +76,17 @@ int main( int argc, char *argv[] )
       if ( sender_type == "polynomial" ) {
         is_polynomial = true;
         fprintf( stderr, "Running polynomial sender\n" );
+      }
+    }
+  }
+
+  for ( int i = 1; i < argc && !is_lerp; i++ ) {
+    string arg( argv[ i ] );
+    if ( arg.substr( 0, 7) == "sender=" ) {
+      string sender_type( arg.substr( 7 ) );
+      if ( sender_type == "lerp" ) {
+        is_lerp = true;
+        fprintf( stderr, "Running lerp sender\n" );
       }
     }
   }
@@ -155,6 +167,10 @@ int main( int argc, char *argv[] )
   } else if ( is_polynomial ) {
     Evaluator< WhiskerTree > eval( configuration_range );
     auto outcome = eval.score_polynomial( 10 );
+    parse_outcome< Evaluator< WhiskerTree >::Outcome > ( outcome );
+  } else if ( is_lerp ) {
+    Evaluator< WhiskerTree > eval( configuration_range );
+    auto outcome = eval.score_lerp( 10 );
     parse_outcome< Evaluator< WhiskerTree >::Outcome > ( outcome );
   } else {
     Evaluator< WhiskerTree > eval( configuration_range );

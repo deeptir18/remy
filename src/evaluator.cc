@@ -7,6 +7,7 @@
 #include "fish-templates.cc"
 #include "aimd-templates.cc"
 #include "polysender-templates.cc"
+#include "lerpsender-templates.cc"
 template <typename T>
 Evaluator< T >::Evaluator( const ConfigRange & range )
   : _prng_seed( global_PRNG()() ), /* freeze the PRNG seed for the life of this Evaluator */
@@ -73,6 +74,46 @@ ProblemBuffers::Problem Evaluator< FinTree >::DNA( const FinTree & fins ) const
   ret.mutable_fins()->CopyFrom( fins.DNA() );
 
   return ret;
+}
+
+template <>
+Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score_lerp(
+            const unsigned int prng_seed,
+            const vector<NetConfig> & configs,
+            const unsigned int ticks_to_run )
+{
+  PRNG run_prng( prng_seed );
+  Evaluator::Outcome the_outcome;
+
+  /* run simulation */
+  for ( auto &x : configs ) {
+    Network<SenderGang<LerpSender, TimeSwitchedSender<LerpSender>>,
+    SenderGang<LerpSender, TimeSwitchedSender<LerpSender>>> network1( LerpSender(), run_prng, x );
+    network1.run_simulation( ticks_to_run );
+    the_outcome.score += network1.senders().utility();
+    the_outcome.throughputs_delays.emplace_back( x, network1.senders().throughputs_delays() );
+  }
+  return the_outcome;
+}
+
+template <>
+Evaluator< FinTree >::Outcome Evaluator< FinTree >::score_lerp(
+            const unsigned int prng_seed,
+            const vector<NetConfig> & configs,
+            const unsigned int ticks_to_run )
+{
+  PRNG run_prng( prng_seed );
+  Evaluator::Outcome the_outcome;
+
+  /* run simulation */
+  for ( auto &x : configs ) {
+    Network<SenderGang<LerpSender, TimeSwitchedSender<LerpSender>>,
+    SenderGang<LerpSender, TimeSwitchedSender<LerpSender>>> network1( LerpSender(), run_prng, x );
+    network1.run_simulation( ticks_to_run );
+    the_outcome.score += network1.senders().utility();
+    the_outcome.throughputs_delays.emplace_back( x, network1.senders().throughputs_delays() );
+  }
+  return the_outcome;
 }
 
 template <>
@@ -244,6 +285,12 @@ template <typename T>
 typename Evaluator< T >::Outcome Evaluator< T >::score_polynomial( const double carefulness ) const
 {
   return score_polynomial( _prng_seed, _configs, _tick_count * carefulness );
+}
+
+template <typename T>
+typename Evaluator< T >::Outcome Evaluator< T >::score_lerp( const double carefulness ) const
+{
+  return score_lerp( _prng_seed, _configs, _tick_count * carefulness );
 }
 
 template class Evaluator< WhiskerTree>;
