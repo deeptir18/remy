@@ -16,16 +16,17 @@ PolynomialSender::PolynomialSender()
      _flow_id( 0 ),
      _memory(),
      _largest_ack( -1 ),
-     _window_increment_poly( Polynomial( 1, 3 ) ),
-     _window_multiplier_poly( Polynomial( 1, 3 ) ),
-     _intersend_rate_poly( Polynomial( 1, 3 ) ) // degree 1, uses 3 signals
+     _window_increment_poly( Polynomial( 2, 3 ) ),
+     _window_multiplier_poly( Polynomial( 2, 3 ) ),
+     _intersend_rate_poly( Polynomial( 2, 3 ) ) // degree 1, uses 3 signals
 
 {
   // initial values for each polynomial
+  // order: coefficient for send rate, receive rate, rtt_ratio
   vector< double > increment, multiplier, intersend;
-  increment.insert(increment.end(), { 20, 30, 40 });
-  multiplier.insert(multiplier.end(), {1, 1, 1});
-  intersend.insert(intersend.end(), {.02, .03, .04});
+  increment.insert(increment.end(), { -.2, .02, .3, .03, .4, .04 });
+  multiplier.insert(multiplier.end(), {-1, 10, 10 , 10, 1, 1});
+  intersend.insert(intersend.end(), {-.02,  .04, .03, .04,  .04, .04});
   _window_increment_poly.initialize_vals( increment );
   _window_multiplier_poly.initialize_vals( multiplier );
   _intersend_rate_poly.initialize_vals( intersend );
@@ -52,9 +53,9 @@ void PolynomialSender::reset( const double & )
    _memory.reset();
   assert( _flow_id != 0 );
   vector< double > increment, multiplier, intersend;
-  increment.insert(increment.end(), { 20, 30, 40 });
-  multiplier.insert(multiplier.end(), {1, 1, 1});
-  intersend.insert(intersend.end(), {.02, .03, .04});
+  increment.insert(increment.end(), { 20, .02, .3, .03,  .4, .04 });
+  multiplier.insert(multiplier.end(), {10, 1, .01 , .01, .011, .011});
+  intersend.insert(intersend.end(), {.002, .02, .03, .003,  .04, .004});
   _window_increment_poly.initialize_vals( increment );
   _window_multiplier_poly.initialize_vals( multiplier );
   _intersend_rate_poly.initialize_vals( intersend );
@@ -92,6 +93,7 @@ void PolynomialSender::update_intersend( const Memory memory )
   double rec_ewma = (double)(memory.field( 1 ) );
   double send_ewma = (double)(memory.field( 0 ) );
   double rtt_ratio = (double)(memory.field( 2 ) );
+  //printf("The value of rec ewmma is %f, send ewma is %f, rtt ratio is %f\n", rec_ewma, send_ewma, rtt_ratio);
   vector < double > signals;
   signals.insert(signals.end(), {rec_ewma, send_ewma, rtt_ratio} );
   double intersend = _intersend_rate_poly.get_value( signals );

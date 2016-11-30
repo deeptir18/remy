@@ -33,6 +33,7 @@ class Polynomial {
         double x = signals[i];
         for ( int j = 0; j < _degree; j++ ) {
           vector< double > coeffs = _terms[i];
+          //printf("The coeff is %f, and the x is %f\n", coeffs[j], x);
           ret += coeffs[j]*pow((float)x, (float)(j+1));
         }
       }
@@ -55,10 +56,10 @@ class Polynomial {
       assert ( (int)vals.size() == _num_signals*_degree );
       int cur_signal = 0;
       for ( int i = 0; i < (int)vals.size(); i ++ ) {
-        vector < double > coeffs = _terms[cur_signal];
+        //vector < double > coeffs = _terms[cur_signal];
         int place = i % ( _degree );
-        coeffs[place] = vals[i];
-        if ( ( i % _degree ) == 0 ) {
+        _terms[cur_signal][place] = vals[i];
+        if ( ( (i+1) % _degree ) == 0 ) {
           cur_signal += 1;
         }
       }
