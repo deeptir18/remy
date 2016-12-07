@@ -7,7 +7,48 @@
 #include "memory.hh"
 #include "packet.hh"
 
+#include <unordered_map>
+
 using namespace std;
+
+typedef tuple<double,double,double> SignalTuple;
+#define SEND_EWMA(s) get <0>(s)
+#define REC_EWMA(s)  get <1>(s)
+#define RTT_RATIO(s) get <2>(s)
+typedef tuple<double,double,double> ActionTuple;
+#define CWND_INC(a)  get <0>(a)
+#define CWND_MULT(a) get <1>(a)
+#define MIN_SEND(a)  get <2>(a)
+typedef pair<SignalTuple,ActionTuple> Point;
+struct HashSignal{
+	size_t operator()(const SignalTuple& s) const{
+		return (
+			hash<double>()(get<0>(s)) ^ 
+			hash<double>()(get<1>(s)) ^
+			hash<double>()(get<2>(s))
+		);
+	}
+};
+struct EqualSignal {
+  inline bool operator()( const SignalTuple& s, const SignalTuple& t ) const{
+		return (
+						 (get<0>(s) == get<0>(t)) && 
+						 (get<1>(s) == get<1>(t)) && 
+						 (get<2>(s) == get<2>(t))
+				   );
+  }
+};
+typedef unordered_map<SignalTuple,ActionTuple,HashSignal,EqualSignal> SignalActionMap;
+
+struct CompareSignals {
+	inline bool operator() (const SignalTuple& s, const SignalTuple& t) const{
+		return (
+						 (get<0>(s) < get<0>(t)) && 
+						 (get<1>(s) < get<1>(t)) && 
+						 (get<2>(s) < get<2>(t))
+				   );
+	}
+};
 
 class LerpSender
 {
@@ -22,21 +63,9 @@ private:
 
   /* Largest ACK so far */
   int _largest_ack;
-  
-  vector<double> _x0s;
-  vector<double> _x1s;
-  vector<double> _x2s;
-
-  double _known_points[2][2][2][3] = {
-    {{{2,1.5,10},  // send_low rec_low rtt_low 
-      {0.5,1,1000}}, // send_low rec_low rtt_high 
-     {{2,1,100},  // send_low rec_high rtt_low
-      {0,0.7,2000}}},// send_low rec_high rtt_high  
-    {{{0.5,1,200},  // send_high rec_low rtt_low
-      {0,0.6,3000}}, // send_high rec_low rtt_high
-     {{-1,1,500},  // send_high rec_high rtt_low 
-      {-1,0.5,5000}}} // send_high rec_high rtt_high 
-  };
+	
+	vector<SignalTuple> _known_signals;
+	SignalActionMap _known_points;
 
 public:
   LerpSender();
@@ -51,7 +80,20 @@ public:
 
   double next_event_time( const double & tickno ) const;
 
-  double interpolate3d (int x0_index, int x1_index, int x2_index, std::vector<double> signals, int action);
+	void add_points ( const vector<Point> points );
+
+	void set_point ( const Point point );
+
 };
 
+	//double _known_points[2][2][2][3] = {
+		//{{{100 , 0.2  , 10},     // send_low rec_low rtt_low
+			//{50  , 0.01 , 1000}},  // send_low rec_low rtt_high
+		 //{{20  , 0.5  , 100},    // send_low rec_high rtt_low
+			//{10  , 0.4  , 2000}}}, // send_low rec_high rtt_high
+		//{{{70  , 0.01 , 200},    // send_high rec_low rtt_low
+			//{100 , 0.05 , 3000}},  // send_high rec_low rtt_high
+		 //{{50  , 0.1  , 500},    // send_high rec_high rtt_low
+			//{60  , 0.05 , 5000}}}  // send_high rec_high rtt_high
+	//};
 #endif

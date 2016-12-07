@@ -16,13 +16,15 @@ LerpSender::LerpSender()
      _flow_id( 0 ),
      _memory(),
      _largest_ack( -1 ),
-     _x0s( 2 ),
-     _x1s( 2 ),
-     _x2s( 2 )
+		 _known_signals( 8 ),
+		 _known_points( {
+					{ make_tuple(0,0,0) , make_tuple(0,0,0) }
+		} )
 {
-  _x0s = {0,5};
-  _x1s = {0,5};
-  _x2s = {0,5};
+	for ( auto it = _known_points.begin(); it != _known_points.end(); ++it ) {
+		_known_signals.push_back(it->first);
+	}
+	sort(_known_signals.begin(), _known_signals.end(), CompareSignals());
 }
 
 void LerpSender::packets_received( const vector< Packet > & packets ) {
@@ -44,9 +46,6 @@ void LerpSender::reset( const double & )
   _largest_ack = _packets_sent - 1;
    _memory.reset();
   assert( _flow_id != 0 );
-  _x0s = {0,5};
-  _x1s = {0,5};
-  _x2s = {0,5};
 }
 
 double LerpSender::next_event_time( const double & tickno ) const
@@ -65,45 +64,93 @@ double LerpSender::next_event_time( const double & tickno ) const
 
 void LerpSender::update_actions( const Memory memory )
 {
-  double send_ewma = (double)(memory.field( 0 ) );
-  double rec_ewma = (double)(memory.field( 1 ) );
-  double rtt_ratio = (double)(memory.field( 2 ) );
-  vector < double > signals =  {send_ewma, rec_ewma, rtt_ratio};
+  double obs_send_ewma = (double)(memory.field( 0 ) );
+  double obs_rec_ewma = (double)(memory.field( 1 ) );
+  double obs_rtt_ratio = (double)(memory.field( 2 ) );
   
-  unsigned int i,j,k;
-  for (i=0; i<_x0s.size() && send_ewma < _x0s[i]; i++);
-  for (j=0; j<_x1s.size() && rec_ewma < _x1s[j]; j++);
-  for (k=0; k<_x2s.size() && rtt_ratio < _x2s[k]; k++);
+	double x0min, x0max, x1min, x1max, x2min, x2max;
 
-  double window_increment = interpolate3d( i, j, k, signals, 0 );
-  double window_multiplier = interpolate3d( i, j, k, signals, 1 );
-  _the_window = min( max( 0, int( _the_window * window_multiplier + window_increment ) ), 1000000 );
-  double intersend = interpolate3d( i, j, k, signals, 2 );
-  _intersend_time = intersend;
-}
+	int i = 0;
+	while (SEND_EWMA(_known_signals[i]) < obs_send_ewma) { i++; }
+	x0min = SEND_EWMA(_known_signals[i-1]);
+	x0max = SEND_EWMA(_known_signals[i]);
+	while (REC_EWMA(_known_signals[i]) < obs_rec_ewma) { i++; }
+	x1min = REC_EWMA(_known_signals[i-1]);
+	x1max = REC_EWMA(_known_signals[i]);
+	while (RTT_RATIO(_known_signals[i]) < obs_rtt_ratio) { i++; }
+	x2min = RTT_RATIO(_known_signals[i-1]);
+	x2max = RTT_RATIO(_known_signals[i]);
 
-double LerpSender::interpolate3d( int x0_min_index, int x1_min_index, int x2_min_index, 
-                                  vector <double> signals, int action ) {
-  double x0min = _x0s[x0_min_index], x0max = _x0s[x0_min_index+1],
-         x1min = _x1s[x1_min_index], x1max = _x1s[x1_min_index+1],
-         x2min = _x2s[x2_min_index], x2max = _x2s[x2_min_index+1];
+  double x0_max_t = (x0max - obs_send_ewma),
+         x0_t_min = (obs_send_ewma - x0min),
+         x1_max_t = (x1max - obs_rec_ewma),
+         x1_t_min = (obs_rec_ewma - x1min),
+         x2_max_t = (x2max - obs_rtt_ratio),
+         x2_t_min = (obs_rtt_ratio - x2min);
 
-  double x0_max_t = (x0max - signals[0]),
-         x0_t_min = (signals[0] - x0min),
-         x1_max_t = (x1max - signals[1]),
-         x1_t_min = (signals[1] - x1min),
-         x2_max_t = (x2max - signals[2]),
-         x2_t_min = (signals[2] - x2min);
+	vector<ActionTuple> actions = {
+		_known_points[make_tuple(x0min, x1min, x2min)],
+		_known_points[make_tuple(x0min, x1min, x2max)],
+		_known_points[make_tuple(x0min, x1max, x2min)],
+		_known_points[make_tuple(x0min, x1max, x2max)],
+		_known_points[make_tuple(x0max, x1min, x2min)],
+		_known_points[make_tuple(x0max, x1min, x2max)],
+		_known_points[make_tuple(x0max, x1max, x2min)],
+		_known_points[make_tuple(x0max, x1max, x2max)],
+	};
 
-  return ((((x0_max_t * ((x1_max_t * x2_max_t * _known_points[x0_min_index][x1_min_index][x2_min_index][action]) + 
-                       (x1_max_t * x2_t_min * _known_points[x0_min_index][x1_min_index][x2_min_index+1][action]) +
-                       (x1_t_min * x2_max_t * _known_points[x0_min_index][x1_min_index+1][x2_min_index][action]) + 
-                       (x1_t_min * x2_t_min * _known_points[x0_min_index][x1_min_index+1][x2_min_index+1][action]))) +
-           (x0_t_min * (x1_max_t * x2_max_t * _known_points[x0_min_index+1][x1_min_index][x2_min_index][action]) + 
-                       (x1_max_t * x2_t_min * _known_points[x0_min_index+1][x1_min_index][x2_min_index+1][action]) +
-                       (x1_t_min * x2_max_t * _known_points[x0_min_index+1][x1_min_index+1][x2_min_index][action]) + 
-                       (x1_t_min * x2_t_min * _known_points[x0_min_index+1][x1_min_index+1][x2_min_index+1][action]))))
+  double window_increment =
+        ((((x0_max_t * ((x1_max_t * x2_max_t * CWND_INC(actions[0])) + 
+                       (x1_max_t * x2_t_min * CWND_INC(actions[1])) +
+                       (x1_t_min * x2_max_t * CWND_INC(actions[2])) + 
+                       (x1_t_min * x2_t_min * CWND_INC(actions[3])))) +
+           (x0_t_min * (x1_max_t * x2_max_t * CWND_INC(actions[4])) + 
+                       (x1_max_t * x2_t_min * CWND_INC(actions[5])) +
+                       (x1_t_min * x2_max_t * CWND_INC(actions[6])) + 
+                       (x1_t_min * x2_t_min * CWND_INC(actions[7])))))
            / 
            ((x0max - x0min) * (x1max - x1min) * (x2max - x2min))
          );
+
+  double window_multiplier = 
+        ((((x0_max_t * ((x1_max_t * x2_max_t * CWND_MULT(actions[0])) + 
+                       (x1_max_t * x2_t_min * CWND_MULT(actions[1])) +
+                       (x1_t_min * x2_max_t * CWND_MULT(actions[2])) + 
+                       (x1_t_min * x2_t_min * CWND_MULT(actions[3])))) +
+           (x0_t_min * (x1_max_t * x2_max_t * CWND_MULT(actions[4])) + 
+                       (x1_max_t * x2_t_min * CWND_MULT(actions[5])) +
+                       (x1_t_min * x2_max_t * CWND_MULT(actions[6])) + 
+                       (x1_t_min * x2_t_min * CWND_MULT(actions[7])))))
+           / 
+           ((x0max - x0min) * (x1max - x1min) * (x2max - x2min))
+         );
+
+  double intersend = 
+        ((((x0_max_t * ((x1_max_t * x2_max_t * MIN_SEND(actions[0])) + 
+                       (x1_max_t * x2_t_min * MIN_SEND(actions[1])) +
+                       (x1_t_min * x2_max_t * MIN_SEND(actions[2])) + 
+                       (x1_t_min * x2_t_min * MIN_SEND(actions[3])))) +
+           (x0_t_min * (x1_max_t * x2_max_t * MIN_SEND(actions[4])) + 
+                       (x1_max_t * x2_t_min * MIN_SEND(actions[5])) +
+                       (x1_t_min * x2_max_t * MIN_SEND(actions[6])) + 
+                       (x1_t_min * x2_t_min * MIN_SEND(actions[7])))))
+           / 
+           ((x0max - x0min) * (x1max - x1min) * (x2max - x2min))
+         );
+
+  _the_window = min( max( 0, int( _the_window * window_multiplier + window_increment ) ), 1000000 );
+  _intersend_time = intersend;
+}
+
+void LerpSender::add_points( const vector<Point> points ) {
+	for (size_t i=0; i<points.size(); i++) {
+		Point p = points[i];
+		_known_signals.push_back(p.first);
+		_known_points.insert(p);
+	}
+	sort(_known_signals.begin(), _known_signals.end(), CompareSignals());
+}
+
+void LerpSender::set_point( const Point point ) {
+	_known_points[point.first] = point.second;
 }
