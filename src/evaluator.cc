@@ -1,4 +1,8 @@
 #include <fcntl.h>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics.hpp>
+#include <boost/accumulators/statistics/tail_quantile.hpp>
+#include <boost/functional/hash.hpp>
 
 #include "configrange.hh"
 #include "evaluator.hh"
@@ -131,6 +135,84 @@ Evaluator< FinTree >::Outcome Evaluator< FinTree >::score( FinTree & run_fins,
   return the_outcome;
 }
 
+pair< double, vector < pair< double, double > > >
+single_simulation ( const NetConfig& config,
+                 const WhiskerTree & t,
+                 PRNG seed,
+                 const bool trace_whisker,
+                 const unsigned int ticks)
+{
+  WhiskerTree tree_copy( t );
+  Network<SenderGang<Rat, TimeSwitchedSender<Rat>>,
+  SenderGang<Rat, TimeSwitchedSender<Rat>>> network1( Rat( tree_copy, trace_whisker ), seed, config );
+  network1.run_simulation( ticks );
+  double score = network1.senders().utility();
+  vector< pair< double, double > > throughput_delay = network1.senders().throughputs_delays();
+  pair < double, vector < pair < double, double > > > summary = make_pair(score, throughput_delay);
+  return summary;
+}
+
+template <>
+Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score_in_parallel( WhiskerTree & run_whiskers,
+             const unsigned int prng_seed,
+             const vector<NetConfig> & configs,
+             const bool trace,
+             const unsigned int ticks_to_run )
+{
+
+  PRNG run_prng( prng_seed );
+
+  run_whiskers.reset_counts();
+
+  // vector that maps the config to the score from the simulation as well as the throughput delay object
+  vector< pair < const NetConfig&, future< pair < double, vector < pair< double, double > > > > > > config_scores;
+  for ( const auto &x : configs ) {
+    config_scores.emplace_back( x, async( launch::async, single_simulation, x, run_whiskers, run_prng, trace, ticks_to_run ));
+  }
+  Evaluator::Outcome the_outcome;
+  // iterate through the config score and update the outcome object
+  for ( auto &x: config_scores ) {
+    // later include stuff to modify the whisker to have all the modifications
+    NetConfig config = x.first;
+    pair< double, vector < pair < double, double > > > result = x.second.get();
+    double score = result.first;
+    the_outcome.score += score;
+    the_outcome.throughputs_delays.emplace_back( config, result.second );
+  }
+
+  the_outcome.used_actions = run_whiskers;
+  return the_outcome;
+}
+
+template <>
+Evaluator< FinTree >::Outcome Evaluator< FinTree >::score_in_parallel( FinTree & run_fins,
+             const unsigned int prng_seed,
+             const vector<NetConfig> & configs,
+             const bool trace,
+             const unsigned int ticks_to_run )
+{
+  PRNG run_prng( prng_seed );
+  unsigned int fish_prng_seed( run_prng() );
+
+  run_fins.reset_counts();
+
+  /* run tests */
+  Evaluator::Outcome the_outcome;
+  for ( auto &x : configs ) {
+    /* run once */
+    Network<SenderGang<Fish, TimeSwitchedSender<Fish>>,
+      SenderGang<Fish, TimeSwitchedSender<Fish>>> network1( Fish( run_fins, fish_prng_seed, trace ), run_prng, x );
+    network1.run_simulation( ticks_to_run );
+    
+    the_outcome.score += network1.senders().utility();
+    the_outcome.throughputs_delays.emplace_back( x, network1.senders().throughputs_delays() );
+  }
+
+  the_outcome.used_actions = run_fins;
+
+  return the_outcome;
+}
+
 template <>
 typename Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::parse_problem_and_evaluate( const ProblemBuffers::Problem & problem )
 {
@@ -200,6 +282,13 @@ typename Evaluator< T >::Outcome Evaluator< T >::score( T & run_actions,
   return score( run_actions, _prng_seed, _configs, trace, _tick_count * carefulness );
 }
 
+
+template <typename T>
+typename Evaluator< T >::Outcome Evaluator< T >::score_in_parallel( T & run_actions,
+				     const bool trace, const double carefulness ) const
+{
+  return score_in_parallel( run_actions, _prng_seed, _configs, trace, _tick_count * carefulness );
+}
 
 template class Evaluator< WhiskerTree>;
 template class Evaluator< FinTree >;

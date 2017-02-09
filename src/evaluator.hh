@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-
+#include <future>
 #include "random.hh"
 #include "whiskertree.hh"
 #include "fintree.hh"
@@ -46,9 +46,19 @@ public:
 		const bool trace = false,
 		const double carefulness = 1) const;
 
+  Outcome score_in_parallel( T & run_actions,
+		const bool trace = false,
+		const double carefulness = 1) const;
+
   static Evaluator::Outcome parse_problem_and_evaluate( const ProblemBuffers::Problem & problem );
 
   static Outcome score( T & run_actions,
+			const unsigned int prng_seed,
+			const std::vector<NetConfig> & configs,
+			const bool trace,
+			const unsigned int ticks_to_run );
+
+  static Outcome score_in_parallel( T & run_actions,
 			const unsigned int prng_seed,
 			const std::vector<NetConfig> & configs,
 			const bool trace,
