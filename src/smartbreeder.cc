@@ -91,7 +91,8 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
   double carefulness = 1;
   bool trace = false;
   const Evaluator< WhiskerTree > eval( _options.config_range );
-
+  int len_replacements = replacements.size();
+  int count = 0;
   // choosing algorithm: direction map
   unordered_map< Direction, double, boost::hash< Direction > > direction_map {};
   // replacement mapped to pair of ( evaluated, score )
@@ -121,6 +122,8 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
         double cached_score = eval_cache_.at( x );
         scores.emplace_back( x, make_pair( false, cached_score ) );
       }
+    } else {
+      count ++;
     }
   }
   // iterate to find the best replacement
@@ -140,6 +143,7 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
     }
 
   }
+    printf("Out of %d replacements, did not evaluate %d options\n", len_replacements, count);
     printf("With score %f, chose %s\n", score_to_beat, whisker_to_improve.str().c_str() );
   return score_to_beat;
 }
