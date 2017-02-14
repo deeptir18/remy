@@ -35,14 +35,19 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
     double score_to_beat = outcome.score;
 
     while ( 1 ) {
-
+      auto start_time = chrono::high_resolution_clock::now();
       double new_score = improve_whisker( whisker_to_improve, whiskers, score_to_beat );
+      auto end_time = chrono::high_resolution_clock::now();
+      chrono::milliseconds time = chrono::duration_cast<chrono::milliseconds>(end_time - start_time);
+      double time_ct = time.count();
       assert( new_score >= score_to_beat );
       if ( new_score == score_to_beat ) {
-	cerr << "Ending search." << endl;
-	break;
+	      cerr << "Ending search." << endl;
+        printf("Took %f milliseconds for score to converge to %f\n", (double)time_ct, score_to_beat);
+	      break;
       } else {
 	      cerr << "Score jumps from " << score_to_beat << " to " << new_score << endl;
+        printf("Took %f milliseconds for score to jump from %f to %f\n", (double)time_ct, score_to_beat, new_score);
 	      score_to_beat = new_score;
       }
     }
@@ -86,8 +91,6 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
   double carefulness = 1;
   bool trace = false;
   const Evaluator< WhiskerTree > eval( _options.config_range );
-  int count = 0;
-  int len_replacements = replacements.size();
 
   // choosing algorithm: direction map
   unordered_map< Direction, double, boost::hash< Direction > > direction_map {};
@@ -118,8 +121,6 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
         double cached_score = eval_cache_.at( x );
         scores.emplace_back( x, make_pair( false, cached_score ) );
       }
-    } else {
-      count ++;
     }
   }
   // iterate to find the best replacement
@@ -140,7 +141,6 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
 
   }
     printf("With score %f, chose %s\n", score_to_beat, whisker_to_improve.str().c_str() );
-    printf("Out of %d, did not evaluate %d replacements\n", len_replacements, count);
   return score_to_beat;
 }
 

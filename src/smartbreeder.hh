@@ -2,6 +2,7 @@
 #define SMARTBREEDER_HH
 
 #include "breeder.hh"
+#include <chrono>
 struct WhiskerImproverOptions
 {
   bool optimize_window_increment = true;
