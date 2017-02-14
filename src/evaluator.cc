@@ -16,8 +16,14 @@ Evaluator< T >::Evaluator( const ConfigRange & range )
     _tick_count( range.simulation_ticks ),
     _configs()
 {
+  // specific changes to be able to compare to 100x branch from 2013 paper
+  const double steps = 100.0;
+  const double link_speed_dynamic_range = range.link_ppt.high / range.link_ppt.low;
+  const double multiplier = pow(link_speed_dynamic_range, 1.0 / steps);
+
+
   // add configs from every point in the cube of configs
-  for (double link_ppt = range.link_ppt.low; link_ppt <= range.link_ppt.high; link_ppt += range.link_ppt.incr) {
+  for (double link_ppt = range.link_ppt.low; link_ppt <= (range.link_ppt.high * (1 + (multiplier-1)/2)); link_ppt *= multiplier) {
     for (double rtt = range.rtt.high; rtt <= range.rtt.high; rtt += range.rtt.incr) {
       for (unsigned int senders = range.num_senders.low; senders <= range.num_senders.high; senders += range.num_senders.incr) {
         for (double on = range.mean_on_duration.low; on <= range.mean_on_duration.high; on += range.mean_on_duration.incr) {
