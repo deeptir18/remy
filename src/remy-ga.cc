@@ -147,7 +147,34 @@ int main( int argc, char *argv[] )
     printf( "whiskers: %s\n", whiskers.str().c_str() );
 
     print_outcome( outcome );
-    // later write the whisker to a file and save the whisker
+    if ( !output_filename.empty() ) {
+      char of[ 128 ];
+      snprintf( of, 128, "%s.%d", output_filename.c_str(), run );
+      fprintf( stderr, "Writing to \"%s\"... ", of );
+      int fd = open( of, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR );
+      if ( fd < 0 ) {
+	      perror( "open" );
+	      exit( 1 );
+      }
+
+      auto remycc = whiskers.DNA();
+      remycc.mutable_config()->CopyFrom( options.config_range.DNA() );
+      remycc.mutable_optimizer()->CopyFrom( Whisker::get_optimizer().DNA() );
+      if ( not remycc.SerializeToFileDescriptor( fd ) ) {
+	      fprintf( stderr, "Could not serialize RemyCC.\n" );
+  	    exit( 1 );
+      }
+
+      if ( close( fd ) < 0 ) {
+	      perror( "close" );
+	      exit( 1 );
+      }
+
+      fprintf( stderr, "done.\n" );
+    }
+
+    fflush( NULL );
+
     run ++;
   }
 }
