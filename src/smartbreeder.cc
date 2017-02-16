@@ -17,7 +17,7 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
   while ( generation < 5 ) {
     const Evaluator< WhiskerTree > eval( _options.config_range );
 
-    auto outcome( eval.score( whiskers ) );
+    auto outcome( eval.score_in_parallel( whiskers ) );
 
     /* is there a whisker at this generation that we can improve? */
     auto most_used_whisker_ptr = outcome.used_actions.most_used( generation );
@@ -65,8 +65,8 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
 
   /* carefully evaluate what we have vs. the previous best */
   const Evaluator< WhiskerTree > eval2( _options.config_range );
-  const auto new_score = eval2.score( whiskers, false, 10 );
-  const auto old_score = eval2.score( input_whiskertree, false, 10 );
+  const auto new_score = eval2.score_in_parallel( whiskers, false, 10 );
+  const auto old_score = eval2.score_in_parallel( input_whiskertree, false, 10 );
 
   if ( old_score.score >= new_score.score ) {
     fprintf( stderr, "Regression, old=%f, new=%f\n", old_score.score, new_score.score );
