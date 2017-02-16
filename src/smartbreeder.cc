@@ -17,7 +17,7 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
   while ( generation < 5 ) {
     const Evaluator< WhiskerTree > eval( _options.config_range );
 
-    auto outcome( eval.score_in_parallel( whiskers ) );
+    auto outcome( eval.score( whiskers ) );
 
     /* is there a whisker at this generation that we can improve? */
     auto most_used_whisker_ptr = outcome.used_actions.most_used( generation );
