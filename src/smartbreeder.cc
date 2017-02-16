@@ -33,7 +33,7 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
     Whisker whisker_to_improve = *most_used_whisker_ptr;
 
     double score_to_beat = outcome.score;
-
+    double old_val = score_to_beat;
     while ( 1 ) {
       auto start_time = chrono::high_resolution_clock::now();
       double new_score = improve_whisker( whisker_to_improve, whiskers, score_to_beat );
@@ -56,6 +56,8 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
 
     const auto result __attribute((unused)) = whiskers.replace( whisker_to_improve );
     assert( result );
+    if ((( score_to_beat - old_val ) / old_val) < .05 )
+      break;
   }
 
   /* Split most used whisker */
