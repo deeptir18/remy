@@ -33,7 +33,7 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
     Whisker whisker_to_improve = *most_used_whisker_ptr;
 
     double score_to_beat = outcome.score;
-    double old_val = score_to_beat;
+    //double old_val = score_to_beat;
     while ( 1 ) {
       auto start_time = chrono::high_resolution_clock::now();
       double new_score = improve_whisker( whisker_to_improve, whiskers, score_to_beat );
@@ -56,8 +56,8 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
 
     const auto result __attribute((unused)) = whiskers.replace( whisker_to_improve );
     assert( result );
-    if ((( score_to_beat - old_val ) / old_val) < .05 )
-      break;
+    //if ((( score_to_beat - old_val ) / old_val) < .05 )
+    //  break;
   }
 
   /* Split most used whisker */
@@ -88,7 +88,6 @@ double
 SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree, double score_to_beat )
 {
   // evaluates replacements in sequence in a smart way
-  vector< Whisker > replacements = get_replacements ( whisker_to_improve );
   vector< pair < const Whisker&, pair< bool, double > > > scores;
 
   const Evaluator< WhiskerTree > eval( _options.config_range );
@@ -96,16 +95,16 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
   std::unordered_map< Direction, std::pair< vector< Whisker >, vector< Whisker > >, boost:: hash< Direction > > bin = get_direction_bins( whisker_to_improve );
 
   // iterate through direction bins
+  int not_evaluated = 0;
   for ( auto it = bin.begin(); it != bin.end(); ++it ) {
-    vector< Whisker > first = it->second.first;
-    evaluate_whisker_list( tree, score_to_beat, first, scores, eval );
-
-    vector< Whisker > second = it->second.second;
-    evaluate_whisker_list( tree, score_to_beat, second, scores, eval );
-
+    if ( evaluate_whisker_list( tree, score_to_beat, it->second.first, scores, eval ) ) {
+      evaluate_whisker_list( tree, score_to_beat, it->second.second, scores, eval );
+    } else {
+      not_evaluated += int( it->second.second.size() );
+    }
   }
-  //evaluate_whisker_list( tree, score_to_beat, replacements, scores, eval );
-  //printf("The length of scores is %f\n", double( scores.size() ) );
+  double original_score = score_to_beat;
+  int len_evaluated = int( scores.size() );
   // iterate to find the best replacement
   for ( auto & x: scores ) {
     const Whisker& replacement( x.first );
@@ -123,6 +122,7 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
     }
 
   }
+    printf("Did not evaluate %d out of %d whiskers for jump from %f to %f\n", not_evaluated, not_evaluated + len_evaluated, original_score, score_to_beat );
     printf("With score %f, chose %s\n", score_to_beat, whisker_to_improve.str().c_str() );
   return score_to_beat;
 }
@@ -193,9 +193,7 @@ SmartBreeder::get_direction_bins( Whisker & whisker_to_improve )
     Direction direction = it->first;
     vector< Whisker > list = it->second;
     sort( list.begin(), list.end(), SortReplacement( whisker_to_improve ) );
-    //std::vector<T>::iterator it = vec.begin();
-    //std::advance(it, pos);
-    //vec.erase(it);
+
     vector< Whisker > first;
     unsigned int count = 0;
     unsigned int len_list = list.size();
@@ -219,5 +217,7 @@ SmartBreeder::get_direction_bins( Whisker & whisker_to_improve )
   }
   return bin;
 }
+
+
 
 
