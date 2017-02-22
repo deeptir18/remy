@@ -88,46 +88,24 @@ double
 SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree, double score_to_beat )
 {
   // evaluates replacements in sequence in a smart way
-  vector< Whisker > replacements = get_sorted_replacements ( whisker_to_improve );
+  vector< Whisker > replacements = get_replacements ( whisker_to_improve );
   vector< pair < const Whisker&, pair< bool, double > > > scores;
-  double carefulness = 1;
-  bool trace = false;
+
   const Evaluator< WhiskerTree > eval( _options.config_range );
-  int len_replacements = replacements.size();
-  int count = 0;
-  // choosing algorithm: direction map
-  unordered_map< Direction, double, boost::hash< Direction > > direction_map {};
-  // replacement mapped to pair of ( evaluated, score )
-  for ( Whisker& x: replacements ) {
-    // function to decide if we even need to try this replacement at all
-    if ( evaluate_replacement( x, whisker_to_improve, direction_map ) ) {
-      // check if in eval cache
-      if ( eval_cache_.find( x ) == eval_cache_.end() ) {
-          // replace whisker
-          WhiskerTree replaced_tree( tree );
-          const bool found_replacement __attribute((unused)) = replaced_tree.replace( x );
-          assert (found_replacement);
-          Evaluator<WhiskerTree>::Outcome outcome = eval.score_in_parallel( replaced_tree, trace, carefulness );
-          double score = outcome.score;
-          scores.emplace_back( x, make_pair( true, score ) );
-          // if score < score to beat, add to the direction map
-          if ( score < score_to_beat ) {
-            Direction direction = Direction( whisker_to_improve, x );
-            if ( direction_map.find( direction ) == direction_map.end() ) {
-              direction_map.insert(make_pair(direction, 1));
-            } else {
-              double val = direction_map.at(direction);
-              direction_map[direction] = val + 1;
-            }
-          }
-      } else {
-        double cached_score = eval_cache_.at( x );
-        scores.emplace_back( x, make_pair( false, cached_score ) );
-      }
-    } else {
-      count ++;
-    }
+
+  std::unordered_map< Direction, std::pair< vector< Whisker >, vector< Whisker > >, boost:: hash< Direction > > bin = get_direction_bins( whisker_to_improve );
+
+  // iterate through direction bins
+  for ( auto it = bin.begin(); it != bin.end(); ++it ) {
+    vector< Whisker > first = it->second.first;
+    evaluate_whisker_list( tree, score_to_beat, first, scores, eval );
+
+    vector< Whisker > second = it->second.second;
+    evaluate_whisker_list( tree, score_to_beat, second, scores, eval );
+
   }
+  //evaluate_whisker_list( tree, score_to_beat, replacements, scores, eval );
+  //printf("The length of scores is %f\n", double( scores.size() ) );
   // iterate to find the best replacement
   for ( auto & x: scores ) {
     const Whisker& replacement( x.first );
@@ -145,22 +123,8 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
     }
 
   }
-    printf("Out of %d replacements, did not evaluate %d options\n", len_replacements, count);
     printf("With score %f, chose %s\n", score_to_beat, whisker_to_improve.str().c_str() );
   return score_to_beat;
-}
-
-bool SmartBreeder::evaluate_replacement( Whisker& replacement, Whisker& original, std::unordered_map< Direction, double, boost::hash< Direction > > direction_map )
-{
-  Direction direction = Direction( original, replacement );
-  if ( direction_map.find( direction ) == direction_map.end() ) {
-    return true;
-  }
-  double times_bad = direction_map.at( direction );
-  if ( times_bad >= 2 ) {
-    return false;
-  }
-  return true;
 }
 
 
@@ -172,33 +136,88 @@ size_t hash_value( const Direction& direction ) {
     return seed;
 }
 
-// function to return a sorted list of replacements
-vector< Whisker > SmartBreeder::get_sorted_replacements( Whisker& whisker_to_improve )
+bool
+SmartBreeder::evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval)
 {
-  vector< Whisker > replacements = get_replacements ( whisker_to_improve );
-  vector< Whisker > sorted_replacements;
-  // now sort them according to direction
-  unordered_map< Direction, vector< Whisker >, boost::hash< Direction > > map{};
+  bool ret = true;
+  bool trace = false;
+  int carefulness = 1;
+  for ( Whisker& x: replacements ) {
+      // check if in eval cache
+      if ( eval_cache_.find( x ) == eval_cache_.end() ) {
+          // replace whisker
+          WhiskerTree replaced_tree( tree );
+          const bool found_replacement __attribute((unused)) = replaced_tree.replace( x );
+          assert (found_replacement);
+          Evaluator<WhiskerTree>::Outcome outcome = eval.score_in_parallel( replaced_tree, trace, carefulness );
+          double score = outcome.score;
+          scores.emplace_back( x, make_pair( true, score ) );
+          // if score < score to beat, add to the direction map
+          if ( score < score_to_beat )
+            ret = false;
+      } else {
+        double cached_score = eval_cache_.at( x );
+        scores.emplace_back( x, make_pair( false, cached_score ) );
+      }
+  }
+  return ret;
+}
+
+
+unordered_map< Direction, pair< vector< Whisker >, vector< Whisker > >, boost:: hash< Direction > >
+SmartBreeder::get_direction_bins( Whisker & whisker_to_improve )
+{
+  unordered_map< Direction, pair< vector< Whisker >, vector< Whisker > >, boost::hash< Direction > > bin {};
+  //vector< Whisker > replacements = get_replacements( whisker_to_improve );
+  vector< Whisker  > replacements = whisker_to_improve.next_generation( _whisker_options.optimize_window_increment,
+                                             _whisker_options.optimize_window_multiple,
+                                             _whisker_options.optimize_intersend );
+  unordered_map< Direction, vector< Whisker >, boost::hash< Direction >> map {};
 
   for ( Whisker& x: replacements ) {
     Direction direction = Direction( whisker_to_improve, x );
     if ( map.find( direction ) == map.end() ) {
+      // insert a new vector
       vector< Whisker > list;
       list.emplace_back( x );
-      map.insert(make_pair(direction, list));
+      map.insert( make_pair( direction, list ) );
     } else {
-      vector< Whisker > list = map.at( direction);
+      vector< Whisker > list = map.at( direction );
       list.emplace_back( x );
       map[direction] = list;
     }
   }
-  for ( auto it = map.begin(); it != map.end(); ++it ) {
-    vector< Whisker > list =  it->second;
-    for ( Whisker& x: list ) {
-      sorted_replacements.emplace_back( x );
-    }
-  }
 
-  return sorted_replacements;
+  // now go through and place into two lists
+  for ( auto it = map.begin(); it != map.end(); ++ it ) {
+    Direction direction = it->first;
+    vector< Whisker > list = it->second;
+    sort( list.begin(), list.end(), SortReplacement( whisker_to_improve ) );
+    //std::vector<T>::iterator it = vec.begin();
+    //std::advance(it, pos);
+    //vec.erase(it);
+    vector< Whisker > first;
+    unsigned int count = 0;
+    unsigned int len_list = list.size();
+    vector< int > indices;
+    for ( Whisker& x : list ) {
+      if ( ( count == 0 ) || ( count == 1 ) || ( count == len_list - 2) || ( count == len_list - 1 ) ) {
+        first.emplace_back( x );
+        indices.emplace_back( count );
+      }
+      count++;
+    }
+
+    for ( int x: indices ){
+      vector< Whisker >::iterator it = list.begin();
+      advance( it, x );
+      list.erase( it );
+    }
+
+    assert( ( first.size() + list.size() == len_list ) );
+    bin.insert( make_pair( direction, make_pair( first, list ) ) );
+  }
+  return bin;
 }
+
 
