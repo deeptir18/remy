@@ -58,8 +58,8 @@ public:
     : _intersend( PLUS ), _window_multiple( PLUS ), _window_increment( PLUS )
     {
       _intersend = get_direction( original.intersend(), replacement.intersend() );
-      _window_multiple = get_direction( original.window_multiple(), replacement.intersend() );
-      _window_increment = get_direction( double( original.window_increment() ), double(original.window_multiple()) );
+      _window_multiple = get_direction( original.window_multiple(), replacement.window_multiple() );
+      _window_increment = get_direction( double( original.window_increment() ), double(replacement.window_increment()) );
     }
   void replace( const int i, const Dir dir )
   {
@@ -88,9 +88,6 @@ public:
   print_map.insert( DirPrint::value_type( MINUS, "minus" ) );
   print_map.insert( DirPrint::value_type( EQUALS, "equals" ) );
   char tmp[256];
-  string intersend;
-  string window_multiple;
-  string window_increment;
 
   snprintf(tmp, 256, "{%s, %s, %s}: {intersend, mult, incr}", print_map[_intersend].c_str(), print_map[_window_multiple].c_str(), print_map[_window_increment].c_str());
   return tmp;
