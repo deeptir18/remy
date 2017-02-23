@@ -50,6 +50,7 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
         printf("Took %f milliseconds for score to jump from %f to %f\n", (double)time_ct, score_to_beat, new_score);
 	      score_to_beat = new_score;
       }
+      printf("--------------------------------------\n");
     }
 
     whisker_to_improve.demote( generation + 1 );
