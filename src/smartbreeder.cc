@@ -109,13 +109,19 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
   // first evaluate initial 6 directions
   for ( Direction& dir: coordinates ) {
     if ( bin.find( dir ) != bin.end() ) {
+      printf("Evaluating direction %s\n", dir.str().c_str() );
       bool dir_good = ( evaluate_whisker_list( tree, score_to_beat, bin.at( dir ), scores, eval ) );
       coordinate_map.insert( make_pair ( dir, dir_good ) );
+      string good = "bad";
+      if ( dir_good )
+        good = "good";
+      printf("Direction %s is %s\n", dir.str().c_str(), good.c_str());
     }
   }
   // try rest -> based on info from first 6 directions
   int not_evaluated = 0;
   for ( auto it = bin.begin(); it != bin.end(); ++it ) {
+     printf("Evaluating direction %s\n", (it->first).str().c_str() );
     if ( evaluate_direction( it->first, coordinate_map ) ) {
       evaluate_whisker_list( tree, score_to_beat, it->second, scores, eval );
     } else {

@@ -81,8 +81,18 @@ public:
   bool operator==( const Direction& other ) const { return ( _intersend == other._intersend ) && ( _window_multiple == other._window_multiple ) && ( _window_increment == other._window_increment ); }
   std::string str(void) const
 {
+  // map
+  typedef map< Dir, std::string > DirPrint;
+  DirPrint print_map;
+  print_map.insert( DirPrint::value_type( PLUS, "plus" ) );
+  print_map.insert( DirPrint::value_type( MINUS, "minus" ) );
+  print_map.insert( DirPrint::value_type( EQUALS, "equals" ) );
   char tmp[256];
-  snprintf(tmp, 256, "{%d, %d, %d}: {intersend, mult, incr}", _intersend, _window_multiple, _window_increment);
+  string intersend;
+  string window_multiple;
+  string window_increment;
+
+  snprintf(tmp, 256, "{%s, %s, %s}: {intersend, mult, incr}", print_map[_intersend].c_str(), print_map[_window_multiple].c_str(), print_map[_window_increment].c_str());
   return tmp;
 }
   friend size_t hash_value( const Direction& direction );
