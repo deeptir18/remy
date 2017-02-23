@@ -3,6 +3,9 @@
 
 #include "breeder.hh"
 #include <chrono>
+#define INTERSEND 0
+#define WINDOW_INCR 1
+#define WINDOW_MULT 2
 struct WhiskerImproverOptions
 {
   bool optimize_window_increment = true;
@@ -49,6 +52,8 @@ private:
     return MINUS;
 }
 public:
+  Direction( const Dir intersend, const Dir window_multiple, const Dir window_increment )
+    : _intersend( intersend ), _window_multiple( window_multiple ), _window_increment( window_increment ) {}
   Direction( const Whisker& original, const Whisker& replacement )
     : _intersend( PLUS ), _window_multiple( PLUS ), _window_increment( PLUS )
     {
@@ -56,6 +61,23 @@ public:
       _window_multiple = get_direction( original.window_multiple(), replacement.intersend() );
       _window_increment = get_direction( double( original.window_increment() ), double(original.window_multiple()) );
     }
+  void replace( const int i, const Dir dir )
+  {
+    if ( i == INTERSEND ) {
+      _intersend = dir;
+    } else if ( i == WINDOW_MULT ) {
+      _window_multiple = dir;
+    } else if ( i == WINDOW_INCR ) {
+      _window_increment = dir;
+    }
+  }
+  Dir get_index( int i )
+  {
+    assert( i == INTERSEND || i == WINDOW_INCR || i == WINDOW_MULT );
+    if ( i == INTERSEND ) { return _intersend; }
+    if ( i == WINDOW_MULT ) { return _window_multiple; }
+    return _window_increment;
+  }
   bool operator==( const Direction& other ) const { return ( _intersend == other._intersend ) && ( _window_multiple == other._window_multiple ) && ( _window_increment == other._window_increment ); }
   std::string str(void) const
 {
