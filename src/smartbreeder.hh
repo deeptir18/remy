@@ -26,8 +26,8 @@ public:
 
     bool operator()(Whisker const &first, Whisker const &second)
     {
-      double distance_one = abs( first.intersend() - _original.intersend() ) + abs( first.window_increment() - _original.intersend() ) + abs( first.window_multiple() - _original.window_multiple() );
-      double distance_two = abs( second.intersend() - _original.intersend() ) + abs( second.window_increment() - _original.intersend() ) + abs( second.window_multiple() - _original.window_multiple() );
+      double distance_one = abs( first.intersend() - _original.intersend() ) + abs( first.window_increment() - _original.window_increment() ) + abs( first.window_multiple() - _original.window_multiple() );
+      double distance_two = abs( second.intersend() - _original.intersend() ) + abs( second.window_increment() - _original.window_increment() ) + abs( second.window_multiple() - _original.window_multiple() );
       return (distance_one < distance_two);
     }
 };
