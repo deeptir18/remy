@@ -53,14 +53,23 @@ public:
     : _intersend( PLUS ), _window_multiple( PLUS ), _window_increment( PLUS )
     {
       _intersend = get_direction( original.intersend(), replacement.intersend() );
-      _window_multiple = get_direction( original.window_multiple(), replacement.intersend() );
-      _window_increment = get_direction( double( original.window_increment() ), double(original.window_multiple()) );
+      _window_multiple = get_direction( original.window_multiple(), replacement.window_multiple() );
+      _window_increment = get_direction( double( original.window_increment() ), double(replacement.window_increment()) );
     }
   bool operator==( const Direction& other ) const { return ( _intersend == other._intersend ) && ( _window_multiple == other._window_multiple ) && ( _window_increment == other._window_increment ); }
   std::string str(void) const
 {
   char tmp[256];
-  snprintf(tmp, 256, "{%d, %d, %d}: {intersend, mult, incr}", _intersend, _window_multiple, _window_increment);
+  typedef map< Dir, std::string > DirPrint;
+  DirPrint print_map;
+  print_map.insert( DirPrint::value_type( PLUS, "plus" ) );
+  print_map.insert( DirPrint::value_type( MINUS, "minus" ) );
+  print_map.insert( DirPrint::value_type( EQUALS, "equals" ) );
+  string intersend;
+  string window_multiple;
+  string window_increment;
+
+  snprintf(tmp, 256, "{%s, %s, %s}: {intersend, mult, incr}", print_map[_intersend].c_str(), print_map[_window_multiple].c_str(), print_map[_window_increment].c_str());
   return tmp;
 }
   friend size_t hash_value( const Direction& direction );
