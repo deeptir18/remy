@@ -93,15 +93,33 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
 
   const Evaluator< WhiskerTree > eval( _options.config_range );
 
-  std::unordered_map< Direction, std::pair< vector< Whisker >, vector< Whisker > >, boost:: hash< Direction > > bin = get_direction_bins( whisker_to_improve );
+  unordered_map< Direction, vector< Whisker >, boost:: hash< Direction > > bin = get_direction_bins( whisker_to_improve );
+  vector< Direction > coordinates;
+  unordered_map< Direction, bool, boost:: hash< Direction > > coordinate_map;
+  for ( int i=0; i < 3; i++ ) {
+    Direction plus = Direction(EQUALS, EQUALS, EQUALS);
+    Direction minus = Direction(EQUALS, EQUALS, EQUALS);
 
-  // iterate through direction bins
+    plus.replace( i, PLUS );
+    minus.replace( i, MINUS );
+
+    coordinates.emplace_back( plus );
+    coordinates.emplace_back( minus );
+  }
+  // first evaluate initial 6 directions
+  for ( Direction& dir: coordinates ) {
+    if ( bin.find( dir ) != bin.end() ) {
+      bool dir_good = ( evaluate_whisker_list( tree, score_to_beat, bin.at( dir ), scores, eval ) );
+      coordinate_map.insert( make_pair ( dir, dir_good ) );
+    }
+  }
+  // try rest -> based on info from first 6 directions
   int not_evaluated = 0;
   for ( auto it = bin.begin(); it != bin.end(); ++it ) {
-    if ( evaluate_whisker_list( tree, score_to_beat, it->second.first, scores, eval ) ) {
-      evaluate_whisker_list( tree, score_to_beat, it->second.second, scores, eval );
+    if ( evaluate_direction( it->first, coordinate_map ) ) {
+      evaluate_whisker_list( tree, score_to_beat, it->second, scores, eval );
     } else {
-      not_evaluated += int( it->second.second.size() );
+      not_evaluated += ( it->second ).size();
     }
   }
   double original_score = score_to_beat;
@@ -165,14 +183,10 @@ SmartBreeder::evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, ve
 }
 
 
-unordered_map< Direction, pair< vector< Whisker >, vector< Whisker > >, boost:: hash< Direction > >
+unordered_map< Direction, vector< Whisker >, boost:: hash< Direction > >
 SmartBreeder::get_direction_bins( Whisker & whisker_to_improve )
 {
-  unordered_map< Direction, pair< vector< Whisker >, vector< Whisker > >, boost::hash< Direction > > bin {};
-  //vector< Whisker > replacements = get_replacements( whisker_to_improve );
-  vector< Whisker  > replacements = whisker_to_improve.next_generation( _whisker_options.optimize_window_increment,
-                                             _whisker_options.optimize_window_multiple,
-                                             _whisker_options.optimize_intersend );
+  vector< Whisker > replacements = get_replacements( whisker_to_improve );
   unordered_map< Direction, vector< Whisker >, boost::hash< Direction >> map {};
 
   for ( Whisker& x: replacements ) {
@@ -188,36 +202,33 @@ SmartBreeder::get_direction_bins( Whisker & whisker_to_improve )
       map[direction] = list;
     }
   }
-
-  // now go through and place into two lists
-  for ( auto it = map.begin(); it != map.end(); ++ it ) {
-    Direction direction = it->first;
-    vector< Whisker > list = it->second;
-    sort( list.begin(), list.end(), SortReplacement( whisker_to_improve ) );
-
-    vector< Whisker > first;
-    unsigned int count = 0;
-    unsigned int len_list = list.size();
-    vector< int > indices;
-    for ( Whisker& x : list ) {
-      if ( ( count == 0 ) || ( count == 1 ) || ( count == len_list - 2) || ( count == len_list - 1 ) ) {
-        first.emplace_back( x );
-        indices.emplace_back( count );
-      }
-      count++;
-    }
-
-    for ( int x: indices ){
-      vector< Whisker >::iterator it = list.begin();
-      advance( it, x );
-      list.erase( it );
-    }
-
-    assert( ( first.size() + list.size() == len_list ) );
-    bin.insert( make_pair( direction, make_pair( first, list ) ) );
-  }
-  return bin;
+  return map;
 }
+
+/*Function evaluates if we should evaluate a direction based on coordinate descent information*/
+bool
+SmartBreeder::evaluate_direction( Direction direction, unordered_map< Direction, bool, boost:: hash< Direction > > coordinate_map)
+{
+  // if Direction has been evaluated -> don't evaluate
+  if ( coordinate_map.find( direction ) != coordinate_map.end() ) {
+    return false;
+  }
+
+  // for each change in the direction -> checks if changing that direction alone is bad
+  for ( int i = 0; i < 3; i ++ ) {
+    if ( direction.get_index( i ) == EQUALS )
+      continue; // don't check if equals at that index
+    Direction dir = Direction( EQUALS, EQUALS, EQUALS );
+    dir.replace( i, direction.get_index( i ) );
+    if ( coordinate_map.find( dir ) != coordinate_map.end() ) {
+      if ( !( coordinate_map.at( dir ) ) ) { // if this direction is BAD -> don't evaluate
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 
 
 

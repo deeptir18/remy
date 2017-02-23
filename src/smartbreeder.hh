@@ -100,7 +100,9 @@ private:
 
   bool evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval);
 
-  std::unordered_map< Direction, std::pair< vector< Whisker >, vector< Whisker > >, boost:: hash< Direction > > get_direction_bins ( Whisker & whisker_to_improve );
+  std::unordered_map< Direction, vector< Whisker >, boost:: hash< Direction > > get_direction_bins ( Whisker & whisker_to_improve );
+
+  bool evaluate_direction( Direction direction, unordered_map< Direction, bool, boost:: hash< Direction > > coordinate_map);
 public:
   SmartBreeder( const BreederOptions & s_options, const WhiskerImproverOptions & s_whisker_options )
     : Breeder( s_options ), _whisker_options( s_whisker_options ) {};
