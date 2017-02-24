@@ -110,19 +110,19 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
   for ( Direction& dir: coordinates ) {
     if ( bin.find( dir ) != bin.end() ) {
       printf("Evaluating direction %s\n", dir.str().c_str() );
-      bool dir_good = ( evaluate_whisker_list( tree, score_to_beat, bin.at( dir ), scores, eval ) );
-      coordinate_map.insert( make_pair ( dir, dir_good ) );
-      string good = "bad";
-      if ( dir_good )
-        good = "good";
-      printf("Direction %s is %s\n", dir.str().c_str(), good.c_str());
+      bool dir_bad = ( evaluate_whisker_list( tree, score_to_beat, bin.at( dir ), scores, eval ) );
+      coordinate_map.insert( make_pair ( dir, dir_bad ) );
+      string bad = "good";
+      if ( dir_bad )
+        bad = "bad";
+      printf("Direction %s is %s\n", dir.str().c_str(), bad.c_str());
     }
   }
   // try rest -> based on info from first 6 directions
   int not_evaluated = 0;
   for ( auto it = bin.begin(); it != bin.end(); ++it ) {
+    if (!( evaluate_direction( it->first, coordinate_map ))) {
      printf("Evaluating direction %s\n", (it->first).str().c_str() );
-    if ( evaluate_direction( it->first, coordinate_map ) ) {
       evaluate_whisker_list( tree, score_to_beat, it->second, scores, eval );
     } else {
       not_evaluated += ( it->second ).size();
@@ -164,7 +164,7 @@ size_t hash_value( const Direction& direction ) {
 bool
 SmartBreeder::evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval)
 {
-  bool ret = true;
+  bool all_bad = true;
   bool trace = false;
   int carefulness = 1;
   for ( Whisker& x: replacements ) {
@@ -178,14 +178,14 @@ SmartBreeder::evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, ve
           double score = outcome.score;
           scores.emplace_back( x, make_pair( true, score ) );
           // if score < score to beat, add to the direction map
-          if ( score < score_to_beat )
-            ret = false;
+          if ( score > score_to_beat )
+            all_bad = true;
       } else {
         double cached_score = eval_cache_.at( x );
         scores.emplace_back( x, make_pair( false, cached_score ) );
       }
   }
-  return ret;
+  return all_bad;
 }
 
 
