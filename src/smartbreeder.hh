@@ -105,12 +105,16 @@ private:
 
   double  improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree, double score_to_beat);
 
-  bool evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval);
+  void evaluate_initial_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval, vector< vector< double > > &replacement_values, Direction &dir);
+
+  double evaluate_and_check( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval, vector< vector< double > > &replacement_values);
 
   std::unordered_map< Direction, vector< Whisker >, boost:: hash< Direction > > get_direction_bins ( Whisker & whisker_to_improve );
 
-  bool evaluate_direction( Direction direction, unordered_map< Direction, bool, boost:: hash< Direction > > coordinate_map);
+ bool evaluate_whisker( Whisker& whisker, vector< vector< double > > &replacement_values );
+
 public:
+    // checks if the whisker has a bad value
   SmartBreeder( const BreederOptions & s_options, const WhiskerImproverOptions & s_whisker_options )
     : Breeder( s_options ), _whisker_options( s_whisker_options ) {};
 
