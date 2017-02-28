@@ -13,7 +13,7 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
   /* evaluate the whiskers we have */
   whiskers.reset_generation();
   unsigned int generation = 0;
-
+  int num_small_improvements = 0;
   while ( generation < 5 ) {
     const Evaluator< WhiskerTree > eval( _options.config_range );
 
@@ -33,7 +33,7 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
     Whisker whisker_to_improve = *most_used_whisker_ptr;
 
     double score_to_beat = outcome.score;
-    //double old_val = score_to_beat;
+    double old_val = score_to_beat;
     while ( 1 ) {
       auto start_time = chrono::high_resolution_clock::now();
       double new_score = improve_whisker( whisker_to_improve, whiskers, score_to_beat );
@@ -57,8 +57,11 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
 
     const auto result __attribute((unused)) = whiskers.replace( whisker_to_improve );
     assert( result );
-    //if ((( score_to_beat - old_val ) / old_val) < .05 )
-    //  break;
+    if ((( score_to_beat - old_val ) / old_val) < .05 )
+      num_small_improvements += 1;
+
+    if ( num_small_improvements > 6 )
+      break; // if for 6 times it's just making incremental improvements - just bisect
   }
 
   /* Split most used whisker */
