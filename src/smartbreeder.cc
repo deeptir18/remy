@@ -119,8 +119,10 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
   // try rest -> based on info from first 6 directions
   int not_evaluated = 0;
   for ( auto it = bin.begin(); it != bin.end(); ++it ) {
-    double skipped = evaluate_and_check( tree, score_to_beat, it->second, scores, eval, replacement_values);
-    not_evaluated += skipped;
+    if ( find( coordinates.begin(), coordinates.end(), it->first ) == coordinates.end() ) {
+      double skipped = evaluate_and_check( tree, score_to_beat, it->second, scores, eval, replacement_values);
+      not_evaluated += skipped;
+    }
   }
 
   double original_score = score_to_beat;
