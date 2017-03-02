@@ -27,7 +27,7 @@ public:
   const int  & window_increment( void ) const { return _window_increment; }
   const double & window_multiple( void ) const { return _window_multiple; }
 
-  std::vector< Whisker > next_generation( bool optimize_window_increment, bool optimize_window_multiple, bool optimize_intersend ) const;
+  std::vector< Whisker > next_generation( bool optimize_window_increment, bool optimize_window_multiple, bool optimize_intersend, bool wide ) const;
 
   std::string str( const unsigned int total=1 ) const;
   
@@ -65,6 +65,16 @@ public:
       { 0.25, 3,   0.05, 1,   4, 3 } /* intersend */
     };
     return default_settings;
+  }
+
+  static const OptimizationSettings & get_wide_optimizer( void ) {
+
+    static OptimizationSettings wide_settings {
+      { 0,    256, 1,    256,  2, 1 }, /* window increment - wider max change than usual*/
+      { 0,    1,   0.01, 1, 2, 1 }, /* window multiple */
+      { 0.25, 3,   0.05, 3,   2, 3 } /* intersend */
+    };
+    return wide_settings;
   }
 };
 

@@ -73,7 +73,8 @@ Evaluator< WhiskerTree >::Outcome RatBreeder::improve( WhiskerTree & whiskers )
 
 vector< Whisker > WhiskerImprover::get_replacements( Whisker & whisker_to_improve ) 
 {
+  bool wide = false;
   return whisker_to_improve.next_generation( _options.optimize_window_increment,
                                              _options.optimize_window_multiple,
-                                             _options.optimize_intersend );
+                                             _options.optimize_intersend, wide );
 }

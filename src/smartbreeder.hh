@@ -101,9 +101,13 @@ private:
   WhiskerImproverOptions _whisker_options;
   std::unordered_map< Whisker, double, boost::hash< Whisker > > eval_cache_ {};
 
-  vector< Whisker > get_replacements( Whisker & whisker_to_improve );
+  vector< Whisker > get_replacements( Whisker & whisker_to_improve, bool wide );
 
   double  improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree, double score_to_beat);
+
+  double improve_whisker_wide_range( Whisker & whisker_to_improve, WhiskerTree & tree, double score_to_beat );
+
+  double evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval);
 
   void evaluate_initial_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval, vector< vector< double > > &replacement_values, Direction &dir);
 

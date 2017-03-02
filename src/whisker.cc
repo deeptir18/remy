@@ -43,7 +43,7 @@ RemyBuffers::Whisker Whisker::DNA( void ) const
   return ret;
 }
 
-vector< Whisker > Whisker::next_generation( bool optimize_window_increment, bool optimize_window_multiple, bool optimize_intersend ) const
+vector< Whisker > Whisker::next_generation( bool optimize_window_increment, bool optimize_window_multiple, bool optimize_intersend, bool wide ) const
 {
   vector< Whisker> ret;
 
@@ -51,6 +51,12 @@ vector< Whisker > Whisker::next_generation( bool optimize_window_increment, bool
   auto window_multiple_alternatives = get_optimizer().window_multiple.alternatives( _window_multiple, optimize_window_multiple );
   auto intersend_alternatives = get_optimizer().intersend.alternatives( _intersend, optimize_intersend );
 
+  if ( wide ) {
+  auto window_increment_alternatives = get_wide_optimizer().window_increment.alternatives( _window_increment, optimize_window_increment );
+  auto window_multiple_alternatives = get_wide_optimizer().window_multiple.alternatives( _window_multiple, optimize_window_multiple );
+  auto intersend_alternatives = get_wide_optimizer().intersend.alternatives( _intersend, optimize_intersend );
+
+  }
   printf("Alternatives: window increment %u to %u, window multiple %f to %f, intersend %f to %f\n",
          *(min_element(window_increment_alternatives.begin(), window_increment_alternatives.end())),
          *(max_element(window_increment_alternatives.begin(), window_increment_alternatives.end())),

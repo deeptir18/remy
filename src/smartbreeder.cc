@@ -16,7 +16,6 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
   int num_small_improvements = 0;
   while ( generation < 5 ) {
     const Evaluator< WhiskerTree > eval( _options.config_range );
-
     auto outcome( eval.score( whiskers ) );
 
     /* is there a whisker at this generation that we can improve? */
@@ -59,9 +58,16 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
     assert( result );
     if ((( score_to_beat - old_val ) / old_val) < .05 )
       num_small_improvements += 1;
-
-    if ( num_small_improvements > 6 )
-      break; // if for 6 times it's just making incremental improvements - just bisect
+    if ((( score_to_beat - old_val ) / old_val ) >= .05 )
+      num_small_improvements = 0;
+    if ( num_small_improvements >= 6 ) {
+      // call function to explore many replacements -> just use the same whisker as before
+      double new_score = improve_whisker_wide_range ( whisker_to_improve, whiskers, score_to_beat ); // explore replacements in a wide range function
+      if ( new_score > score_to_beat ) {
+        const auto result __attribute((unused)) = whiskers.replace( whisker_to_improve );
+        assert( result );
+      }
+    }
   }
 
   /* Split most used whisker */
@@ -81,11 +87,44 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
   return new_score;
 }
 
-vector< Whisker > SmartBreeder::get_replacements( Whisker & whisker_to_improve ) 
+vector< Whisker > SmartBreeder::get_replacements( Whisker & whisker_to_improve, bool wide )
 {
   return whisker_to_improve.next_generation( _whisker_options.optimize_window_increment,
                                              _whisker_options.optimize_window_multiple,
-                                             _whisker_options.optimize_intersend );
+                                             _whisker_options.optimize_intersend, wide );
+}
+
+double
+SmartBreeder::improve_whisker_wide_range( Whisker & whisker_to_improve, WhiskerTree & tree, double score_to_beat )
+{
+  printf("ENTERING THE IMPROVE WHISKER WIDE RANGE FUNCTION, current score to beat: %f\n", score_to_beat);
+  // tries to replace the whisker but does a WIDE range of replacements
+  vector< pair < const Whisker&, pair< bool, double > > > scores;
+  vector< Whisker > replacements = get_replacements( whisker_to_improve, true );
+  const Evaluator< WhiskerTree > eval( _options.config_range );
+  // now evaluate ALL these whiskers
+  double value = evaluate_whisker_list( tree, score_to_beat, replacements, scores, eval);
+  // parse through scores and return the best one
+
+  for ( auto & x: scores ) {
+    const Whisker& replacement( x.first );
+    const auto result( x.second );
+    const bool was_new_evaluation( result.first );
+    const double score( result.second );
+
+    /* should we cache this result?*/
+    if ( was_new_evaluation ) {
+      eval_cache_.insert( make_pair( replacement, score ) );
+    }
+    if ( score > score_to_beat ) {
+      score_to_beat = score;
+      whisker_to_improve = replacement; // replaces object in memory
+    }
+
+  }
+  printf("Value is %f\n", value);
+  printf("With score %f, chose %s\n", score_to_beat, whisker_to_improve.str().c_str() );
+  return score_to_beat;
 }
 
 double
@@ -248,10 +287,40 @@ SmartBreeder::evaluate_and_check( WhiskerTree &tree, double score_to_beat, vecto
   return bad;
 }
 
+double
+SmartBreeder::evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval)
+{
+  double ret = score_to_beat;
+  bool trace = false;
+  int carefulness = 1;
+  for ( Whisker& x: replacements ) {
+    // check if in eval cache
+    if ( eval_cache_.find( x ) == eval_cache_.end() ) {
+      // replace whisker
+       WhiskerTree replaced_tree( tree );
+      const bool found_replacement __attribute((unused)) = replaced_tree.replace( x );
+      assert (found_replacement);
+      Evaluator<WhiskerTree>::Outcome outcome = eval.score_in_parallel( replaced_tree, trace, carefulness );
+      double score = outcome.score;
+      scores.emplace_back( x, make_pair( true, score ) );
+      if ( score > score_to_beat ) {
+        printf("Tried Whisker: %s, and score improved to %f\n", x.str().c_str(), score);
+        ret = score;
+      } else {
+        printf("Tried Whisker: %s, and score did not improve to %f\n", x.str().c_str(), score);
+      }
+    } else {
+      double cached_score = eval_cache_.at( x );
+      scores.emplace_back( x, make_pair( false, cached_score ) );
+    }
+  }
+  return ret;
+}
+
 unordered_map< Direction, vector< Whisker >, boost:: hash< Direction > >
 SmartBreeder::get_direction_bins( Whisker & whisker_to_improve )
 {
-  vector< Whisker > replacements = get_replacements( whisker_to_improve );
+  vector< Whisker > replacements = get_replacements( whisker_to_improve, false );
   unordered_map< Direction, vector< Whisker >, boost::hash< Direction >> map {};
 
   for ( Whisker& x: replacements ) {
