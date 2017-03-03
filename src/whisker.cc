@@ -46,7 +46,6 @@ RemyBuffers::Whisker Whisker::DNA( void ) const
 vector< Whisker > Whisker::next_generation( bool optimize_window_increment, bool optimize_window_multiple, bool optimize_intersend ) const
 {
   vector< Whisker> ret;
-
   auto window_increment_alternatives = get_optimizer().window_increment.alternatives( _window_increment, optimize_window_increment );
   auto window_multiple_alternatives = get_optimizer().window_multiple.alternatives( _window_multiple, optimize_window_multiple );
   auto intersend_alternatives = get_optimizer().intersend.alternatives( _intersend, optimize_intersend );
@@ -79,6 +78,45 @@ vector< Whisker > Whisker::next_generation( bool optimize_window_increment, bool
 
   return ret;
 }
+/*Returns the next action in sequence*/
+Whisker Whisker::next_action( bool optimize_window_increment, bool optimize_window_multiple, bool optimize_intersend, double cur_value, double increment, bool neg ) const
+{
+  if ( neg )
+    increment *= -1;
+  Whisker new_whisker{ *this };
+  new_whisker._generation++;
+	new_whisker._window_increment = _window_increment;
+	new_whisker._window_multiple = _window_multiple;
+	new_whisker._intersend = _intersend;
+
+  int count = 0;
+  if ( optimize_window_increment ) {
+    count ++;
+    if ( !(get_optimizer().window_increment.eligible_value( int(cur_value + increment) ) )) {
+      return { *this };
+    }
+    new_whisker._window_increment = int(cur_value + increment);
+  }
+  if ( optimize_window_multiple ) {
+    count ++;
+    if ( !(get_optimizer().window_multiple.eligible_value( cur_value + increment ) )) {
+      return { *this };
+    }
+    new_whisker._window_multiple = cur_value + increment;
+  }
+  if ( optimize_intersend ) {
+    count ++;
+    if  (( !get_optimizer().intersend.eligible_value( cur_value + increment ) )) {
+      return { *this };
+    }
+    new_whisker._intersend = cur_value + increment;
+  }
+
+  assert( count == 1 ); // ensure that only one of optimize increment, multiple, intersend is true
+  new_whisker.round();
+  return new_whisker;
+}
+
 
 string Whisker::str( const unsigned int total ) const
 {

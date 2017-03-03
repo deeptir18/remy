@@ -6,6 +6,16 @@
 #define INTERSEND 0
 #define WINDOW_INCR 1
 #define WINDOW_MULT 2
+#define intersend_change .1
+#define window_incr_change 2
+#define window_mult_change .01
+/*
+  Need to make a simple version of this coordinate descent idea
+  -Have improve pick the action to improve through the current process of trying the first 6 directions - and seeing the average score improvement in each
+  -Now LINEARLY just change the parameter in the same direction until the improvement stops happening -> need to modify whisker to be able to replace a whisker on the fly
+  -See how this behaves using the current whisker as guidance
+  -Lol sigh
+ */
 struct WhiskerImproverOptions
 {
   bool optimize_window_increment = true;
@@ -79,6 +89,7 @@ public:
     return _window_increment;
   }
   bool operator==( const Direction& other ) const { return ( _intersend == other._intersend ) && ( _window_multiple == other._window_multiple ) && ( _window_increment == other._window_increment ); }
+  bool operator!=( const Direction& other ) const { return ( _intersend != other._intersend ) || ( _window_multiple != other._window_multiple ) || ( _window_increment != other._window_increment ); }
   std::string str(void) const
 {
   // map
@@ -102,14 +113,16 @@ private:
   std::unordered_map< Whisker, double, boost::hash< Whisker > > eval_cache_ {};
 
   vector< Whisker > get_replacements( Whisker & whisker_to_improve );
-
+  vector< Whisker > get_initial_replacements( Whisker & whisker_to_improve );
   double  improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree, double score_to_beat);
 
-  bool evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval);
+  double evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval);
 
-  std::unordered_map< Direction, vector< Whisker >, boost:: hash< Direction > > get_direction_bins ( Whisker & whisker_to_improve );
+  double evaluate_whisker( WhiskerTree &tree, Whisker replacement, Evaluator< WhiskerTree > eval);
 
-  bool evaluate_direction( Direction direction, unordered_map< Direction, bool, boost:: hash< Direction > > coordinate_map);
+
+  unordered_map< Direction, vector< Whisker >, boost:: hash< Direction > > get_direction_bins( Whisker & whisker_to_improve );
+
 public:
   SmartBreeder( const BreederOptions & s_options, const WhiskerImproverOptions & s_whisker_options )
     : Breeder( s_options ), _whisker_options( s_whisker_options ) {};
