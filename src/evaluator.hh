@@ -10,6 +10,7 @@
 #include "network.hh"
 #include "problem.pb.h"
 #include "answer.pb.h"
+#include "lerpsender.hh"
 
 template <typename T>
 class Evaluator
@@ -50,6 +51,7 @@ public:
       const double carefulness = 1) const;
 
   Outcome score_lerp(
+			PointGrid & grid,
       const double carefulness = 1) const;
 
   static Evaluator::Outcome parse_problem_and_evaluate( const ProblemBuffers::Problem & problem );
@@ -66,6 +68,7 @@ public:
       const unsigned int ticks_to_run );
 
   static Outcome score_lerp(
+			PointGrid & grid,
       const unsigned int prng_seed,
       const std::vector<NetConfig> & configs,
       const unsigned int ticks_to_run );

@@ -11,6 +11,10 @@
 
 using namespace std;
 
+#define MAX_SEND_EWMA 163840
+#define MAX_REC_EWMA 163840
+#define MAX_RTT_RATIO 163840
+
 typedef tuple<double,double,double> SignalTuple;
 #define SEND_EWMA(s) get <0>(s)
 #define REC_EWMA(s)  get <1>(s)
@@ -50,9 +54,21 @@ struct CompareSignals {
 	}
 };
 
+class PointGrid 
+{
+public:
+	vector<SignalTuple> _signals;
+	SignalActionMap _points;
+	PointGrid();
+	void add_points ( const vector<Point> points );
+	void set_point ( const Point point );
+};
+
+
 class LerpSender
 {
 private:
+	PointGrid & _grid;
   unsigned int _packets_sent, _packets_received;
   double _last_send_time;
   /* _the_window is the congestion window */
@@ -64,11 +80,9 @@ private:
   /* Largest ACK so far */
   int _largest_ack;
 	
-	vector<SignalTuple> _known_signals;
-	SignalActionMap _known_points;
 
 public:
-  LerpSender();
+  LerpSender( PointGrid & grid );
   void update_actions( const Memory memory );
   void packets_received( const std::vector< Packet > & packets );
   void reset( const double & tickno ); /* start new flow */
@@ -80,9 +94,6 @@ public:
 
   double next_event_time( const double & tickno ) const;
 
-	void add_points ( const vector<Point> points );
-
-	void set_point ( const Point point );
 
 };
 

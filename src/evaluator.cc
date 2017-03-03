@@ -78,6 +78,7 @@ ProblemBuffers::Problem Evaluator< FinTree >::DNA( const FinTree & fins ) const
 
 template <>
 Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score_lerp(
+						PointGrid & grid,
             const unsigned int prng_seed,
             const vector<NetConfig> & configs,
             const unsigned int ticks_to_run )
@@ -88,7 +89,7 @@ Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score_lerp(
   /* run simulation */
   for ( auto &x : configs ) {
     Network<SenderGang<LerpSender, TimeSwitchedSender<LerpSender>>,
-    SenderGang<LerpSender, TimeSwitchedSender<LerpSender>>> network1( LerpSender(), run_prng, x );
+    SenderGang<LerpSender, TimeSwitchedSender<LerpSender>>> network1( LerpSender( grid ), run_prng, x );
     network1.run_simulation( ticks_to_run );
     the_outcome.score += network1.senders().utility();
     the_outcome.throughputs_delays.emplace_back( x, network1.senders().throughputs_delays() );
@@ -98,6 +99,7 @@ Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score_lerp(
 
 template <>
 Evaluator< FinTree >::Outcome Evaluator< FinTree >::score_lerp(
+						PointGrid & grid,
             const unsigned int prng_seed,
             const vector<NetConfig> & configs,
             const unsigned int ticks_to_run )
@@ -108,7 +110,7 @@ Evaluator< FinTree >::Outcome Evaluator< FinTree >::score_lerp(
   /* run simulation */
   for ( auto &x : configs ) {
     Network<SenderGang<LerpSender, TimeSwitchedSender<LerpSender>>,
-    SenderGang<LerpSender, TimeSwitchedSender<LerpSender>>> network1( LerpSender(), run_prng, x );
+    SenderGang<LerpSender, TimeSwitchedSender<LerpSender>>> network1( LerpSender( grid ), run_prng, x );
     network1.run_simulation( ticks_to_run );
     the_outcome.score += network1.senders().utility();
     the_outcome.throughputs_delays.emplace_back( x, network1.senders().throughputs_delays() );
@@ -288,9 +290,9 @@ typename Evaluator< T >::Outcome Evaluator< T >::score_polynomial( const double 
 }
 
 template <typename T>
-typename Evaluator< T >::Outcome Evaluator< T >::score_lerp( const double carefulness ) const
+typename Evaluator< T >::Outcome Evaluator< T >::score_lerp( PointGrid & grid, const double carefulness ) const
 {
-  return score_lerp( _prng_seed, _configs, _tick_count * carefulness );
+  return score_lerp( grid, _prng_seed, _configs, _tick_count * carefulness );
 }
 
 template class Evaluator< WhiskerTree>;

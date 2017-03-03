@@ -7,25 +7,79 @@ using namespace std;
 
 static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 
-LerpSender::LerpSender()
-  :  _packets_sent( 0 ),
+/*****************************************************************************/
+PointGrid::PointGrid()
+	:  _signals( 8 ),
+	   _points( {
+				{ make_tuple(0,0,0),
+					make_tuple(1,1,3) },
+				{ make_tuple(0,0,MAX_RTT_RATIO),
+				  make_tuple(1,1,3) },
+				{ make_tuple(0,MAX_REC_EWMA,0),
+				  make_tuple(1,1,3) },
+				{ make_tuple(0,MAX_REC_EWMA,MAX_RTT_RATIO),
+			  	make_tuple(1,1,3) },
+				{ make_tuple(MAX_SEND_EWMA,0,0),
+				  make_tuple(1,1,3) },
+				{ make_tuple(MAX_SEND_EWMA,0,MAX_RTT_RATIO),
+				  make_tuple(1,1,3) },
+				{ make_tuple(MAX_SEND_EWMA,MAX_REC_EWMA,0),
+			 	  make_tuple(1,1,3) },
+				{ make_tuple(MAX_SEND_EWMA,MAX_REC_EWMA,MAX_RTT_RATIO),
+				  make_tuple(1,1,3) }
+		 } )
+{
+	// Default values: set all 8 corners of the box to the action (1,1,3)
+	for ( int i = 0; i <= MAX_SEND_EWMA; i += MAX_SEND_EWMA) {
+		for ( int j = 0; j <= MAX_REC_EWMA; j += MAX_REC_EWMA) {
+			for ( int k = 0; k <= MAX_RTT_RATIO; k += MAX_RTT_RATIO) {
+				_points[make_tuple(i,j,k)] = make_tuple(1,1,3);
+			}
+		}
+	}
+	// Keep a sorted vector of the 3D coordinates to assist in finding the
+	// bounding box when interpolating
+	for ( auto it = _points.begin(); it != _points.end(); ++it ) {
+		_signals.push_back(it->first);
+	}
+	sort(_signals.begin(), _signals.end(), CompareSignals());
+}
+
+/*
+void PointGrid::add_center_point( const Point p ) {
+	_signals.push_back(p.first);
+	_points.insert(p);
+	// TODO: add the other 8 corresponding points, by interpolating their values
+	sort(_signals.begin(), _signals.end(), CompareSignals());
+}
+*/
+
+void PointGrid::add_points( const vector<Point> points ) {
+	for (size_t i=0; i<points.size(); i++) {
+		Point p = points[i];
+		_signals.push_back(p.first);
+		_points.insert(p);
+	}
+	sort(_signals.begin(), _signals.end(), CompareSignals());
+}
+
+void PointGrid::set_point( const Point point ) {
+	_points[point.first] = point.second;
+}
+/*****************************************************************************/
+
+/*****************************************************************************/
+LerpSender::LerpSender(PointGrid & grid)
+  :  _grid( grid ),
+		 _packets_sent( 0 ),
      _packets_received( 0 ),
      _last_send_time( 0 ),
      _the_window( INITIAL_WINDOW ),
      _intersend_time( 0 ),
      _flow_id( 0 ),
      _memory(),
-     _largest_ack( -1 ),
-		 _known_signals( 8 ),
-		 _known_points( {
-					{ make_tuple(0,0,0) , make_tuple(0,0,0) }
-		} )
-{
-	for ( auto it = _known_points.begin(); it != _known_points.end(); ++it ) {
-		_known_signals.push_back(it->first);
-	}
-	sort(_known_signals.begin(), _known_signals.end(), CompareSignals());
-}
+     _largest_ack( -1 )
+{}
 
 void LerpSender::packets_received( const vector< Packet > & packets ) {
   _packets_received += packets.size();
@@ -71,15 +125,15 @@ void LerpSender::update_actions( const Memory memory )
 	double x0min, x0max, x1min, x1max, x2min, x2max;
 
 	int i = 0;
-	while (SEND_EWMA(_known_signals[i]) < obs_send_ewma) { i++; }
-	x0min = SEND_EWMA(_known_signals[i-1]);
-	x0max = SEND_EWMA(_known_signals[i]);
-	while (REC_EWMA(_known_signals[i]) < obs_rec_ewma) { i++; }
-	x1min = REC_EWMA(_known_signals[i-1]);
-	x1max = REC_EWMA(_known_signals[i]);
-	while (RTT_RATIO(_known_signals[i]) < obs_rtt_ratio) { i++; }
-	x2min = RTT_RATIO(_known_signals[i-1]);
-	x2max = RTT_RATIO(_known_signals[i]);
+	while (SEND_EWMA(_grid._signals[i]) < obs_send_ewma) { i++; }
+	x0min = SEND_EWMA(_grid._signals[i-1]);
+	x0max = SEND_EWMA(_grid._signals[i]);
+	while (REC_EWMA(_grid._signals[i]) < obs_rec_ewma) { i++; }
+	x1min = REC_EWMA(_grid._signals[i-1]);
+	x1max = REC_EWMA(_grid._signals[i]);
+	while (RTT_RATIO(_grid._signals[i]) < obs_rtt_ratio) { i++; }
+	x2min = RTT_RATIO(_grid._signals[i-1]);
+	x2max = RTT_RATIO(_grid._signals[i]);
 
   double x0_max_t = (x0max - obs_send_ewma),
          x0_t_min = (obs_send_ewma - x0min),
@@ -89,14 +143,14 @@ void LerpSender::update_actions( const Memory memory )
          x2_t_min = (obs_rtt_ratio - x2min);
 
 	vector<ActionTuple> actions = {
-		_known_points[make_tuple(x0min, x1min, x2min)],
-		_known_points[make_tuple(x0min, x1min, x2max)],
-		_known_points[make_tuple(x0min, x1max, x2min)],
-		_known_points[make_tuple(x0min, x1max, x2max)],
-		_known_points[make_tuple(x0max, x1min, x2min)],
-		_known_points[make_tuple(x0max, x1min, x2max)],
-		_known_points[make_tuple(x0max, x1max, x2min)],
-		_known_points[make_tuple(x0max, x1max, x2max)],
+		_grid._points[make_tuple(x0min, x1min, x2min)],
+		_grid._points[make_tuple(x0min, x1min, x2max)],
+		_grid._points[make_tuple(x0min, x1max, x2min)],
+		_grid._points[make_tuple(x0min, x1max, x2max)],
+		_grid._points[make_tuple(x0max, x1min, x2min)],
+		_grid._points[make_tuple(x0max, x1min, x2max)],
+		_grid._points[make_tuple(x0max, x1max, x2min)],
+		_grid._points[make_tuple(x0max, x1max, x2max)],
 	};
 
   double window_increment =
@@ -141,16 +195,4 @@ void LerpSender::update_actions( const Memory memory )
   _the_window = min( max( 0, int( _the_window * window_multiplier + window_increment ) ), 1000000 );
   _intersend_time = intersend;
 }
-
-void LerpSender::add_points( const vector<Point> points ) {
-	for (size_t i=0; i<points.size(); i++) {
-		Point p = points[i];
-		_known_signals.push_back(p.first);
-		_known_points.insert(p);
-	}
-	sort(_known_signals.begin(), _known_signals.end(), CompareSignals());
-}
-
-void LerpSender::set_point( const Point point ) {
-	_known_points[point.first] = point.second;
-}
+/*****************************************************************************/

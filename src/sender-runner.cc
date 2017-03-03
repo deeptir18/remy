@@ -46,6 +46,7 @@ int main( int argc, char *argv[] )
 {
   WhiskerTree whiskers;
   FinTree fins;
+	PointGrid grid;
   bool is_poisson = false;
   bool is_polynomial = false;
   bool is_lerp = false;
@@ -109,6 +110,9 @@ int main( int argc, char *argv[] )
         }
         fins = FinTree( tree );
         print_tree< RemyBuffers::FinTree >(tree);
+			} else if ( is_lerp ) {
+				// TODO load this from file instead of creating blank one
+				grid = PointGrid();
       } else {
         RemyBuffers::WhiskerTree tree;
         if ( !tree.ParseFromFileDescriptor( fd ) ) {
@@ -170,7 +174,7 @@ int main( int argc, char *argv[] )
     parse_outcome< Evaluator< WhiskerTree >::Outcome > ( outcome );
   } else if ( is_lerp ) {
     Evaluator< WhiskerTree > eval( configuration_range );
-    auto outcome = eval.score_lerp( 10 );
+    auto outcome = eval.score_lerp( grid, 10 );
     parse_outcome< Evaluator< WhiskerTree >::Outcome > ( outcome );
   } else {
     Evaluator< WhiskerTree > eval( configuration_range );
