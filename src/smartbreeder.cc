@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "smartbreeder.hh"
-
+#include <ctime>
 using namespace std;
 
 Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers )
@@ -50,6 +50,11 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
         printf("Took %f milliseconds for score to jump from %f to %f\n", (double)time_ct, score_to_beat, new_score);
 	      score_to_beat = new_score;
       }
+      chrono::time_point<chrono::system_clock> time_point;
+      time_point = chrono::system_clock::now();
+
+      time_t ttp = chrono::system_clock::to_time_t(time_point);
+      cout << "time: " << ctime(&ttp);
       printf("--------------------------------------\n");
     }
 
@@ -179,6 +184,8 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
     }
     whisker_to_improve = best_replacement;
     score_to_beat = current_best_score;
+  } else {
+    printf("From the initial direction, no one direction gave a good improvement\n");
   }
     printf("With score %f, chose %s\n", score_to_beat, whisker_to_improve.str().c_str() );
   return score_to_beat;
