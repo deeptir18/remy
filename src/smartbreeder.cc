@@ -127,7 +127,7 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
       double avg = ( evaluate_whisker_list( tree, score_to_beat, bin.at( dir ), scores, eval ) );
       if ( avg > best_avg_score_change ) {
         best_dir = dir;
-        avg = best_avg_score_change;
+				best_avg_score_change = avg;
       }
     }
   }
@@ -168,7 +168,6 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
     bool optimize_multiplier = ( change_index == WINDOW_MULT ) ? true: false;
     double current_best_score = score_to_beat;
     Whisker best_replacement = whisker_to_improve;
-    if ( optimize_increment )
     while ( true ) {
       Whisker next_action = whisker_to_improve.next_action( optimize_increment, optimize_multiplier, optimize_intersend, cur_value, cur_change, neg );
       printf("Trying whisker %s\n", next_action.str().c_str() );
