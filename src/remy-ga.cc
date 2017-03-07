@@ -5,11 +5,26 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <setjmp.h>
 
 #include "smartbreeder.hh"
 #include "dna.pb.h"
 #include "configrange.hh"
 using namespace std;
+
+jmp_buf flush_whisker_and_quit;
+bool already_handling_signal = false;
+
+void handle_sigint(int signum) {
+	if (!already_handling_signal) {
+		already_handling_signal = true;
+		printf("Caught signal %d. Jumping back out to main loop.\n", signum);
+		longjmp(flush_whisker_and_quit, 1);
+	} else {
+		printf("Already handling signal %d.\n", signum);
+	}
+}
 
 void print_range( const Range & range, const string & name )
 {
@@ -138,15 +153,24 @@ int main( int argc, char *argv[] )
   } else {
     printf( "Not saving output. Use the of=FILENAME argument to save the results.\n" );
   }
-  unsigned int run = 0;
+  volatile unsigned int run = 0;
   // make an instance of "smart breeder"
   SmartBreeder breeder( options, whisker_options );
-  while ( 1 ) {
-    auto outcome = breeder.improve( whiskers );
-    printf( "run = %u, score = %f\n", run, outcome.score );
+	volatile bool keep_going = true;
+  while ( keep_going ) {
+		Evaluator< WhiskerTree >::Outcome outcome;
+		if (setjmp(flush_whisker_and_quit) == 0) { // real return
+			already_handling_signal = false;
+			outcome = breeder.improve( whiskers );
+			already_handling_signal = true;
+			printf( "run = %u, score = %f\n", run, outcome.score );
+			print_outcome( outcome );
+		} else {
+			printf("Returned to main loop from signal handler.\n");
+			keep_going = false;
+		}
     printf( "whiskers: %s\n", whiskers.str().c_str() );
 
-    print_outcome( outcome );
     if ( !output_filename.empty() ) {
       char of[ 128 ];
       snprintf( of, 128, "%s.%d", output_filename.c_str(), run );
