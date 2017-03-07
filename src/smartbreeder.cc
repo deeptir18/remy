@@ -221,9 +221,9 @@ SmartBreeder::evaluate_whisker( WhiskerTree &tree, Whisker replacement, Evaluato
 double
 SmartBreeder::evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval)
 {
-  double ret = 0; // avg change in score
   bool trace = false;
   int carefulness = 1;
+  double best_change = 0;
   for ( Whisker& x: replacements ) {
       // check if in eval cache
       if ( eval_cache_.find( x ) == eval_cache_.end() ) {
@@ -235,16 +235,17 @@ SmartBreeder::evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, ve
           double score = outcome.score;
           scores.emplace_back( x, make_pair( true, score ) );
           double change = ( score - score_to_beat );
-          ret += change;
+          if ( change > best_change )
+            best_change = change;
       } else {
         double cached_score = eval_cache_.at( x );
-          double change = ( cached_score - score_to_beat );
-          ret += change;
+        double change = ( cached_score - score_to_beat );
+        if ( change > best_change )
+          change = best_change;
         scores.emplace_back( x, make_pair( false, cached_score ) );
       }
   }
-  ret = ret/replacements.size();
-  return ret;
+  return best_change; // return best change in any direction
 }
 
 
