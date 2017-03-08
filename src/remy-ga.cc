@@ -56,6 +56,7 @@ int main( int argc, char *argv[] )
   WhiskerImproverOptions whisker_options;
   RemyBuffers::ConfigRange input_config;
   string config_filename;
+  volatile unsigned int run = 0;
 
   for ( int i = 1; i < argc; i++ ) {
     string arg( argv[ i ] );
@@ -72,7 +73,14 @@ int main( int argc, char *argv[] )
 	fprintf( stderr, "Could not parse %s.\n", filename.c_str() );
 	exit( 1 );
       }
+
       whiskers = WhiskerTree( tree );
+
+			// Read the run number from our input protobuf
+			const char *pd = strrchr(filename.c_str(),'.');
+			run = atoi(pd+1);
+			printf("Input protobuf was at run %d\n", run);
+			run++;
 
       if ( close( fd ) < 0 ) {
 	perror( "close" );
@@ -153,7 +161,10 @@ int main( int argc, char *argv[] )
   } else {
     printf( "Not saving output. Use the of=FILENAME argument to save the results.\n" );
   }
-  volatile unsigned int run = 0;
+
+	printf("Registering signal handler.\n");
+	signal(SIGINT, handle_sigint);
+
   // make an instance of "smart breeder"
   SmartBreeder breeder( options, whisker_options );
 	volatile bool keep_going = true;
