@@ -3,19 +3,13 @@
 
 #include "breeder.hh"
 #include <chrono>
-#define INTERSEND 0
-#define WINDOW_INCR 1
-#define WINDOW_MULT 2
-#define intersend_change .1
-#define window_incr_change 2
-#define window_mult_change .01
-/*
-  Need to make a simple version of this coordinate descent idea
-  -Have improve pick the action to improve through the current process of trying the first 6 directions - and seeing the average score improvement in each
-  -Now LINEARLY just change the parameter in the same direction until the improvement stops happening -> need to modify whisker to be able to replace a whisker on the fly
-  -See how this behaves using the current whisker as guidance
-  -Lol sigh
- */
+#define WINDOW_INCR 0
+#define WINDOW_MULT 1
+#define INTERSEND 2
+#define WINDOW_INCR_CHANGE 2
+#define WINDOW_MULT_CHANGE .01
+#define INTERSEND_CHANGE .1
+
 struct WhiskerImproverOptions
 {
   bool optimize_window_increment = true;
@@ -39,8 +33,8 @@ public:
 
     bool operator()(Whisker const &first, Whisker const &second)
     {
-      double distance_one = abs( first.intersend() - _original.intersend() ) + abs( first.window_increment() - _original.window_increment() ) + abs( first.window_multiple() - _original.window_multiple() );
-      double distance_two = abs( second.intersend() - _original.intersend() ) + abs( second.window_increment() - _original.window_increment() ) + abs( second.window_multiple() - _original.window_multiple() );
+      double distance_one =  abs( first.window_increment() - _original.window_increment() ) + abs( first.window_multiple() - _original.window_multiple() ) + abs( first.intersend() - _original.intersend() );
+      double distance_two = abs( second.window_increment() - _original.window_increment() ) + abs( second.window_multiple() - _original.window_multiple() ) + abs( second.intersend() - _original.intersend() );
       return (distance_one < distance_two);
     }
 };
@@ -48,9 +42,9 @@ public:
 class Direction
 {
 private:
-  Dir _intersend;
-  Dir _window_multiple;
   Dir _window_increment;
+  Dir _window_multiple;
+  Dir _intersend;
   Dir get_direction( double a, double b )
   {
     if ( a == b ) {
@@ -62,46 +56,54 @@ private:
     return MINUS;
 }
 public:
-  Direction( const Dir intersend, const Dir window_multiple, const Dir window_increment )
-    : _intersend( intersend ), _window_multiple( window_multiple ), _window_increment( window_increment ) {}
+  Direction( const Dir window_increment, const Dir window_multiple, const Dir intersend )
+    : _window_increment( window_increment ), _window_multiple( window_multiple ), _intersend( intersend ) {}
   Direction( const Whisker& original, const Whisker& replacement )
-    : _intersend( PLUS ), _window_multiple( PLUS ), _window_increment( PLUS )
+    : _window_increment( PLUS ), _window_multiple( PLUS ), _intersend( PLUS )
     {
-      _intersend = get_direction( original.intersend(), replacement.intersend() );
-      _window_multiple = get_direction( original.window_multiple(), replacement.window_multiple() );
       _window_increment = get_direction( double( original.window_increment() ), double(replacement.window_increment()) );
+      _window_multiple = get_direction( original.window_multiple(), replacement.window_multiple() );
+      _intersend = get_direction( original.intersend(), replacement.intersend() );
     }
   void replace( const int i, const Dir dir )
   {
-    if ( i == INTERSEND ) {
-      _intersend = dir;
+    if ( i == WINDOW_INCR ) {
+      _window_increment = dir;
     } else if ( i == WINDOW_MULT ) {
       _window_multiple = dir;
-    } else if ( i == WINDOW_INCR ) {
-      _window_increment = dir;
+    } else if ( i == INTERSEND ) {
+      _intersend = dir;
     }
   }
   Dir get_index( int i )
   {
-    assert( i == INTERSEND || i == WINDOW_INCR || i == WINDOW_MULT );
-    if ( i == INTERSEND ) { return _intersend; }
+    assert( i == WINDOW_INCR || i == WINDOW_MULT || i == INTERSEND );
+    if ( i == WINDOW_INCR ) { return _window_increment; }
     if ( i == WINDOW_MULT ) { return _window_multiple; }
-    return _window_increment;
+		return _intersend;
   }
-  bool operator==( const Direction& other ) const { return ( _intersend == other._intersend ) && ( _window_multiple == other._window_multiple ) && ( _window_increment == other._window_increment ); }
-  bool operator!=( const Direction& other ) const { return ( _intersend != other._intersend ) || ( _window_multiple != other._window_multiple ) || ( _window_increment != other._window_increment ); }
-  std::string str(void) const
-{
-  // map
-  typedef map< Dir, std::string > DirPrint;
-  DirPrint print_map;
-  print_map.insert( DirPrint::value_type( PLUS, "plus" ) );
-  print_map.insert( DirPrint::value_type( MINUS, "minus" ) );
-  print_map.insert( DirPrint::value_type( EQUALS, "equals" ) );
-  char tmp[256];
 
-  snprintf(tmp, 256, "{%s, %s, %s}: {intersend, mult, incr}", print_map[_intersend].c_str(), print_map[_window_multiple].c_str(), print_map[_window_increment].c_str());
-  return tmp;
+  bool operator==( const Direction& other ) const { return
+		( _window_increment == other._window_increment ) &&
+		( _window_multiple == other._window_multiple ) &&
+		( _intersend == other._intersend ); }
+
+		bool operator!=( const Direction& other ) const { return
+		( _window_increment != other._window_increment ) ||
+		( _window_multiple != other._window_multiple ) ||
+		( _intersend != other._intersend ); }
+
+		std::string str(void) const
+  {
+    // map
+    typedef map< Dir, std::string > DirPrint;
+    DirPrint print_map;
+    print_map.insert( DirPrint::value_type( PLUS, "plus" ) );
+    print_map.insert( DirPrint::value_type( MINUS, "minus" ) );
+    print_map.insert( DirPrint::value_type( EQUALS, "equals" ) );
+    char tmp[256];
+		snprintf(tmp, 256, "{%s, %s, %s}: {incr, mult, intersend}\n", print_map[_window_increment].c_str(), print_map[_window_multiple].c_str(), print_map[_intersend].c_str() );
+    return tmp;
 }
   friend size_t hash_value( const Direction& direction );
 };
@@ -113,8 +115,10 @@ private:
   std::unordered_map< Whisker, double, boost::hash< Whisker > > eval_cache_ {};
 
   vector< Whisker > get_replacements( Whisker & whisker_to_improve );
-  vector< Whisker > get_initial_replacements( Whisker & whisker_to_improve );
-  double  improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree, double score_to_beat);
+
+	vector< Whisker > get_initial_replacements( Whisker & whisker_to_improve );
+
+	double  improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree, double score_to_beat);
 
   double evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval);
 

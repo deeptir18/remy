@@ -81,8 +81,9 @@ vector< Whisker > Whisker::next_generation( bool optimize_window_increment, bool
 /*Returns the next action in sequence*/
 Whisker Whisker::next_action( bool optimize_window_increment, bool optimize_window_multiple, bool optimize_intersend, double cur_value, double increment, bool neg ) const
 {
-  if ( neg )
+  if ( neg ) {
     increment *= -1;
+	}
   Whisker new_whisker{ *this };
   new_whisker._generation++;
 	new_whisker._window_increment = _window_increment;

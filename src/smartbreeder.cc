@@ -15,6 +15,7 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
   unsigned int generation = 0;
 
   while ( generation < 5 ) {
+		printf("-----In Generation While loop with gen: %d-----------\n", generation);
     const Evaluator< WhiskerTree > eval( _options.config_range );
 
     auto outcome( eval.score( whiskers ) );
@@ -33,7 +34,6 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
     Whisker whisker_to_improve = *most_used_whisker_ptr;
 
     double score_to_beat = outcome.score;
-    //double old_val = score_to_beat;
     while ( 1 ) {
       auto start_time = chrono::high_resolution_clock::now();
       double new_score = improve_whisker( whisker_to_improve, whiskers, score_to_beat );
@@ -44,6 +44,7 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
       if ( new_score == score_to_beat ) {
 	      cerr << "Ending search." << endl;
         printf("Took %f milliseconds for score to converge to %f\n", (double)time_ct, score_to_beat);
+      	printf("--------------------------------------\n");
 	      break;
       } else {
 	      cerr << "Score jumps from " << score_to_beat << " to " << new_score << endl;
@@ -90,6 +91,7 @@ vector< Whisker > SmartBreeder::get_replacements( Whisker & whisker_to_improve )
 
 vector< Whisker > SmartBreeder::get_initial_replacements( Whisker & whisker_to_improve )
 {
+  // first get increment alternates, then add the other two actions	
   vector< Whisker > ret =  whisker_to_improve.next_generation( true, false, false );
   vector< Whisker > mult = whisker_to_improve.next_generation( false, true, false );
   vector< Whisker > intersend = whisker_to_improve.next_generation( false, false, true );
@@ -121,13 +123,13 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
   }
   // first evaluate initial 6 directions
   Direction best_dir = Direction( EQUALS, EQUALS, EQUALS );
-  double best_avg_score_change = 0;
+  double best_score_change = 0;
   for ( Direction& dir: coordinates ) {
     if ( bin.find( dir ) != bin.end() ) {
-      double avg = ( evaluate_whisker_list( tree, score_to_beat, bin.at( dir ), scores, eval ) );
-      if ( avg > best_avg_score_change ) {
+      double change = ( evaluate_whisker_list( tree, score_to_beat, bin.at( dir ), scores, eval ) );
+      if ( change > best_score_change ) {
         best_dir = dir;
-				best_avg_score_change = avg;
+				best_score_change = change;
       }
     }
   }
@@ -148,32 +150,37 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
       whisker_to_improve = replacement; // replaces object in memory
     }
   }
+	// print where the whisker currently is
+	printf("After evaluating initial directions, whisker is: %s -> score: %f\n", whisker_to_improve.str().c_str(), score_to_beat );
 
+	// only probe a specific direction if one of the original replacements showed improvement
   Direction equals = Direction( EQUALS, EQUALS, EQUALS );
   if ( best_dir != equals ) {
     // iterate to find the best replacement in this direction
-    int change_index = INTERSEND;
+    int change_index = 0;
     for ( int i = 0; i < 3; i++ ) {
       if ( best_dir.get_index( i ) != EQUALS )
         change_index = i;
     }
 
-    // now keep probing this direction until the score improves
-    double change = ( change_index == INTERSEND ) ? intersend_change : ( change_index == WINDOW_INCR ) ? window_incr_change : window_mult_change;
+		// calculate which direction to probe until score stops improving
+    double change = ( change_index == WINDOW_INCR ) ? WINDOW_INCR_CHANGE : ( change_index == WINDOW_MULT ) ? WINDOW_MULT_CHANGE : INTERSEND_CHANGE;
     double cur_change = change;
-    double cur_value = ( change_index == INTERSEND ) ? whisker_to_improve.intersend() : ( change_index == WINDOW_INCR ) ? whisker_to_improve.window_increment() : whisker_to_improve.window_multiple();
-    bool neg = ( best_dir.get_index( change_index ) == MINUS) ? true: false;
-    bool optimize_intersend = ( change_index == INTERSEND ) ? true: false;
-    bool optimize_increment = ( change_index == WINDOW_INCR ) ? true: false;
-    bool optimize_multiplier = ( change_index == WINDOW_MULT ) ? true: false;
-    double current_best_score = score_to_beat;
+    double cur_value = ( change_index == WINDOW_INCR ) ? whisker_to_improve.window_increment() : ( change_index == WINDOW_MULT ) ? whisker_to_improve.window_multiple() : whisker_to_improve.intersend();
+    bool neg = ( best_dir.get_index( change_index ) == MINUS);
+    bool optimize_increment = ( change_index == WINDOW_INCR );
+    bool optimize_multiplier = ( change_index == WINDOW_MULT );
+    bool optimize_intersend = ( change_index == INTERSEND );
+
+		double current_best_score = score_to_beat;
     Whisker best_replacement = whisker_to_improve;
     while ( true ) {
       Whisker next_action = whisker_to_improve.next_action( optimize_increment, optimize_multiplier, optimize_intersend, cur_value, cur_change, neg );
-      printf("Trying whisker %s\n", next_action.str().c_str() );
       // score this action and see if it's better
       double score = evaluate_whisker( tree, next_action, eval );
-      if ( score > current_best_score ) {
+      printf("Tried whisker %s, score is: %f\n", next_action.str().c_str(), score );
+
+			if ( score > current_best_score ) {
         current_best_score = score;
         best_replacement = next_action;
         cur_change += change;
@@ -198,24 +205,26 @@ size_t hash_value( const Direction& direction ) {
     boost::hash_combine( seed, direction._window_increment );
     return seed;
 }
+
 double
 SmartBreeder::evaluate_whisker( WhiskerTree &tree, Whisker replacement, Evaluator< WhiskerTree > eval)
 {
-    bool trace = false;
-    int carefulness = 1;
-    if ( eval_cache_.find( replacement ) == eval_cache_.end() ) {
-      // replace whisker
-      WhiskerTree replaced_tree( tree );
-      const bool found_replacement __attribute((unused)) = replaced_tree.replace( replacement );
-      assert (found_replacement);
-      Evaluator<WhiskerTree>::Outcome outcome = eval.score_in_parallel( replaced_tree, trace, carefulness );
-      double score = outcome.score;
-      eval_cache_.insert( make_pair( replacement, score ) ); // add this to eval cache
-      return score;
-    } else {
-      double cached_score = eval_cache_.at( replacement );
-      return cached_score;
-    }
+  // returns the score from evaluating  single whisker
+	bool trace = false;
+  int carefulness = 1;
+ 	if ( eval_cache_.find( replacement ) == eval_cache_.end() ) {
+  	// replace whisker
+    WhiskerTree replaced_tree( tree );
+    const bool found_replacement __attribute((unused)) = replaced_tree.replace( replacement );
+    assert (found_replacement);
+    Evaluator<WhiskerTree>::Outcome outcome = eval.score_in_parallel( replaced_tree, trace, carefulness );
+    double score = outcome.score;
+    eval_cache_.insert( make_pair( replacement, score ) ); // add this to eval cache
+    return score;
+  } else {
+    double cached_score = eval_cache_.at( replacement );
+    return cached_score;
+  }
 }
 double
 SmartBreeder::evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval)
@@ -251,6 +260,7 @@ SmartBreeder::evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, ve
 unordered_map< Direction, vector< Whisker >, boost:: hash< Direction > >
 SmartBreeder::get_direction_bins( Whisker & whisker_to_improve )
 {
+	// sorts all whiskers in list into a map based on direction
   vector< Whisker > replacements = get_initial_replacements( whisker_to_improve );
   unordered_map< Direction, vector< Whisker >, boost::hash< Direction >> map {};
 
