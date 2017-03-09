@@ -78,7 +78,7 @@ public:
 	vector<SignalTuple> _signals; // list of values for each signal, used to calc which box we're in
 	SignalActionMap _points; // map of signal to action
 
-	PointGrid();
+	PointGrid( bool track = false );
 	PointGrid( PointGrid & other ); 
 	
 	SignalActionMap::iterator begin();

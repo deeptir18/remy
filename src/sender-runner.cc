@@ -88,7 +88,7 @@ int main( int argc, char *argv[] )
       if ( sender_type == "lerp" ) {
         is_lerp = true;
         fprintf( stderr, "Running lerp sender\n" );
-				grid = PointGrid();
+				grid = PointGrid( true );
 				printf("Created new point grid:\n%s\n",grid.str().c_str());
       }
     }

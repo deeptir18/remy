@@ -14,8 +14,8 @@ static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 #define DEFAULT_INCR 1
 #define DEFAULT_MULT 1
 #define DEFAULT_SEND 3
-PointGrid::PointGrid()
-	:	 _track ( true ),
+	PointGrid::PointGrid( bool track )
+	:	 _track ( track ),
 		 _acc ( NUM_SIGNALS ), // if true, accumulates all signals here
 	   _signals( ( (int) pow( 2, NUM_SIGNALS ) ) ),
 	   _points( )
@@ -99,6 +99,7 @@ void PointGrid::track ( double s, double r, double t ) {
 }
 
 SignalTuple PointGrid::get_median_signal() {
+	assert(_track);
 	return make_tuple( 
 			boost::accumulators::median( _acc[0] ), 
 			boost::accumulators::median( _acc[1] ),
