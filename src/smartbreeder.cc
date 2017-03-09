@@ -135,7 +135,6 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
 			direction_results.insert( make_pair( dir, change ) );
     }
   }
-	vector< Whisker > further_replacements =  get_further_replacements( whisker_to_improve, direction_results );
   // iterate to find the best replacement of what we have so far
   for ( auto & x: scores ) {
     const Whisker& replacement( x.first );
@@ -155,47 +154,11 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
 	// print where the whisker currently is
 	printf("After evaluating initial directions, whisker is: %s -> score: %f\n", whisker_to_improve.str().c_str(), score_to_beat );
 
-	// only probe a specific direction if one of the original replacements showed improvement
-  Direction equals = Direction( EQUALS, EQUALS, EQUALS );
-  if ( best_dir != equals ) {
-    // iterate to find the best replacement in this direction
-    int change_index = 0;
-    for ( int i = 0; i < 3; i++ ) {
-      if ( best_dir.get_index( i ) != EQUALS )
-        change_index = i;
-    }
-
-		// calculate which direction to probe until score stops improving
-    double change = ( change_index == WINDOW_INCR ) ? WINDOW_INCR_CHANGE : ( change_index == WINDOW_MULT ) ? WINDOW_MULT_CHANGE : INTERSEND_CHANGE;
-    double cur_change = change;
-    double cur_value = ( change_index == WINDOW_INCR ) ? whisker_to_improve.window_increment() : ( change_index == WINDOW_MULT ) ? whisker_to_improve.window_multiple() : whisker_to_improve.intersend();
-    bool neg = ( best_dir.get_index( change_index ) == MINUS);
-    bool optimize_increment = ( change_index == WINDOW_INCR );
-    bool optimize_multiplier = ( change_index == WINDOW_MULT );
-    bool optimize_intersend = ( change_index == INTERSEND );
-
-		double current_best_score = score_to_beat;
-    Whisker best_replacement = whisker_to_improve;
-    while ( true ) {
-      Whisker next_action = whisker_to_improve.next_action( optimize_increment, optimize_multiplier, optimize_intersend, cur_value, cur_change, neg );
-      // score this action and see if it's better
-      double score = evaluate_whisker( tree, next_action, eval );
-      printf("Tried whisker %s, score is: %f\n", next_action.str().c_str(), score );
-
-			if ( score > current_best_score ) {
-        current_best_score = score;
-        best_replacement = next_action;
-        cur_change += change;
-      } else {
-        break;
-      }
-    }
-    whisker_to_improve = best_replacement;
-    score_to_beat = current_best_score;
-  } else {
-    printf("From the initial direction, no one direction gave a good improvement\n");
-  }
-    printf("With score %f, chose %s\n", score_to_beat, whisker_to_improve.str().c_str() );
+	vector< Whisker > further_replacements = get_further_replacements( whisker_to_improve, direction_results );
+	for ( Whisker& replacement: further_replacements ) {
+		score_to_beat = evaluate_whisker( tree, replacement, eval, whisker_to_improve, score_to_beat);
+	}
+  printf("With score %f, chose %s\n", score_to_beat, whisker_to_improve.str().c_str() );
   return score_to_beat;
 }
 
@@ -250,7 +213,7 @@ SmartBreeder::get_further_replacements( Whisker & whisker_to_improve, unordered_
 
 }
 double
-SmartBreeder::evaluate_whisker( WhiskerTree &tree, Whisker replacement, Evaluator< WhiskerTree > eval)
+SmartBreeder::evaluate_whisker( WhiskerTree &tree, Whisker replacement, Evaluator< WhiskerTree > eval, Whisker& whisker_to_improve, double score_to_beat)
 {
   // returns the score from evaluating  single whisker
 	bool trace = false;
@@ -264,11 +227,19 @@ SmartBreeder::evaluate_whisker( WhiskerTree &tree, Whisker replacement, Evaluato
     double score = outcome.score;
     eval_cache_.insert( make_pair( replacement, score ) ); // add this to eval cache
 		printf(" Tried whisker: %s, got score: %f\n", replacement.str().c_str(), score );
-    return score;
+		if ( score > score_to_beat ) {
+			whisker_to_improve = replacement;
+			score_to_beat = score;
+		}
+    return score_to_beat;
   } else {
     double cached_score = eval_cache_.at( replacement );
 		printf(" Tried whisker: %s, got score: %f\n", replacement.str().c_str(), cached_score );
-    return cached_score;
+		if ( cached_score > score_to_beat ) {
+			whisker_to_improve = replacement;
+			score_to_beat = cached_score;
+		}
+    return score_to_beat;
   }
 }
 double
