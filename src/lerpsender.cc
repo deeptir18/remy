@@ -1,39 +1,31 @@
 #include <limits>
+#include <iomanip>
 #include <algorithm>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/median.hpp>
 
 #include "lerpsender.hh"
-
 using namespace std;
 
 static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 
 /*****************************************************************************/
+#define DEFAULT_INCR 1
+#define DEFAULT_MULT 1
+#define DEFAULT_SEND 3
 PointGrid::PointGrid()
-	:  _signals( 8 ),
-	   _points( {
-				{ make_tuple(0,0,0),
-					make_tuple(1,1,3) },
-				{ make_tuple(0,0,MAX_RTT_RATIO),
-				  make_tuple(1,1,3) },
-				{ make_tuple(0,MAX_REC_EWMA,0),
-				  make_tuple(1,1,3) },
-				{ make_tuple(0,MAX_REC_EWMA,MAX_RTT_RATIO),
-			  	make_tuple(1,1,3) },
-				{ make_tuple(MAX_SEND_EWMA,0,0),
-				  make_tuple(1,1,3) },
-				{ make_tuple(MAX_SEND_EWMA,0,MAX_RTT_RATIO),
-				  make_tuple(1,1,3) },
-				{ make_tuple(MAX_SEND_EWMA,MAX_REC_EWMA,0),
-			 	  make_tuple(1,1,3) },
-				{ make_tuple(MAX_SEND_EWMA,MAX_REC_EWMA,MAX_RTT_RATIO),
-				  make_tuple(1,1,3) }
-		 } )
+	:	 _track ( true ),
+		 _acc ( NUM_SIGNALS ), // if true, accumulates all signals here
+	   _signals( ( (int) pow( 2, NUM_SIGNALS ) ) ),
+	   _points( )
 {
-	// Default values: set all 8 corners of the box to the action (1,1,3)
+	// Default values: set all 8 corners of the box to the default action
 	for ( int i = 0; i <= MAX_SEND_EWMA; i += MAX_SEND_EWMA) {
 		for ( int j = 0; j <= MAX_REC_EWMA; j += MAX_REC_EWMA) {
 			for ( int k = 0; k <= MAX_RTT_RATIO; k += MAX_RTT_RATIO) {
-				_points[make_tuple(i,j,k)] = make_tuple(1,1,3);
+				_points[make_tuple(i,j,k)] = 
+					make_tuple(DEFAULT_INCR,DEFAULT_MULT,DEFAULT_SEND);
 			}
 		}
 	}
@@ -45,26 +37,73 @@ PointGrid::PointGrid()
 	sort(_signals.begin(), _signals.end(), CompareSignals());
 }
 
-/*
-void PointGrid::add_center_point( const Point p ) {
-	_signals.push_back(p.first);
-	_points.insert(p);
-	// TODO: add the other 8 corresponding points, by interpolating their values
-	sort(_signals.begin(), _signals.end(), CompareSignals());
-}
-*/
+// Copy constructor
+PointGrid::PointGrid( PointGrid & other )
+	:	_track( other._track ),
+		_acc( other._acc ),
+	  _signals( other._signals ),
+	  _points( other._points )
+{}
 
-void PointGrid::add_points( const vector<Point> points ) {
-	for (size_t i=0; i<points.size(); i++) {
-		Point p = points[i];
-		_signals.push_back(p.first);
-		_points.insert(p);
+// For iterating through all points in the grid
+SignalActionMap::iterator PointGrid::begin() {
+	return _points.begin();
+}
+SignalActionMap::iterator PointGrid::end() {
+	return _points.end();
+}
+
+// Number of points in the grid
+int PointGrid::size() {
+	return _signals.size();
+}
+
+string _stuple_str( SignalTuple t ) {
+	ostringstream stream;
+	stream << "S[send=" 
+		     << SEND_EWMA(t) << ",rec=" 
+		     << REC_EWMA(t) << ",ratio=" 
+				 << RTT_RATIO(t)
+				 << "]";
+	return stream.str();
+}
+
+string _atuple_str( ActionTuple t ) {
+	ostringstream stream;
+	stream << "A[inc=" 
+		     << CWND_INC(t) << ",mult=" 
+		     << CWND_MULT(t) << ",intr=" 
+				 << MIN_SEND(t)
+				 << "]";
+	return stream.str();
+}
+
+string _point_str( Point p ) {
+	return _stuple_str(p.first) + " -> " + _atuple_str(p.second);
+}
+
+string PointGrid::str() {
+	string ret;
+	for ( auto it = begin(); it != end(); ++it ) {
+		ret += _stuple_str(it->first) + string( " -> " ) + _atuple_str(it->second) + string( "\n" ); 
 	}
-	sort(_signals.begin(), _signals.end(), CompareSignals());
+	return ret;
 }
 
-void PointGrid::set_point( const Point point ) {
-	_points[point.first] = point.second;
+void PointGrid::track ( double s, double r, double t ) {
+	if (_track) {
+		_acc[0]( s );
+		_acc[1]( r );
+		_acc[2]( t );
+	}
+}
+
+SignalTuple PointGrid::get_median_signal() {
+	return make_tuple( 
+			boost::accumulators::median( _acc[0] ), 
+			boost::accumulators::median( _acc[1] ),
+			boost::accumulators::median( _acc[2] )
+	);
 }
 /*****************************************************************************/
 
@@ -81,16 +120,6 @@ LerpSender::LerpSender(PointGrid & grid)
      _largest_ack( -1 )
 {}
 
-void LerpSender::packets_received( const vector< Packet > & packets ) {
-  _packets_received += packets.size();
-  _largest_ack = max( packets.at( packets.size() - 1 ).seq_num, _largest_ack );
-  _the_window = max( INITIAL_WINDOW, _the_window );
-  _memory.packets_received( packets, _flow_id, _largest_ack );
-
-  update_actions( _memory );
-  //printf("Updated window to be %f and intersend to be %f\n", _the_window, _intersend_time );
-}
-
 void LerpSender::reset( const double & )
 {
   _the_window = INITIAL_WINDOW;
@@ -100,6 +129,15 @@ void LerpSender::reset( const double & )
   _largest_ack = _packets_sent - 1;
    _memory.reset();
   assert( _flow_id != 0 );
+}
+
+void LerpSender::packets_received( const vector< Packet > & packets ) {
+  _packets_received += packets.size();
+  _largest_ack = max( packets.at( packets.size() - 1 ).seq_num, _largest_ack );
+  _the_window = max( INITIAL_WINDOW, _the_window );
+  _memory.packets_received( packets, _flow_id, _largest_ack );
+
+  update_actions( _memory );
 }
 
 double LerpSender::next_event_time( const double & tickno ) const
@@ -121,7 +159,42 @@ void LerpSender::update_actions( const Memory memory )
   double obs_send_ewma = (double)(memory.field( 0 ) );
   double obs_rec_ewma = (double)(memory.field( 1 ) );
   double obs_rtt_ratio = (double)(memory.field( 2 ) );
-  
+
+	_grid.track( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio );
+
+	ActionTuple a = interpolate( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio );
+
+  _the_window = min( max( 0, int( _the_window * CWND_MULT(a) + CWND_INC(a) ) ), 1000000 );
+  _intersend_time = MIN_SEND(a);
+}
+
+void LerpSender::add_inner_point( const Point point, PointGrid & grid ) {
+	// Add inner point
+	grid._points[point.first] = point.second;
+
+	// Add all side points
+	for (double &x : vector<double>{0,SEND_EWMA(point.first),MAX_SEND_EWMA}) {
+		for (double &y : vector<double>{0,REC_EWMA(point.first),MAX_REC_EWMA}) {
+			for (double &z : vector<double>{0,RTT_RATIO(point.first),MAX_RTT_RATIO}) {
+				if ( ( x == SEND_EWMA(point.first ) ) || 
+						 ( y == REC_EWMA(point.first ) )  || 
+						 ( z == RTT_RATIO(point.first ) ) ) {
+					SignalTuple tmp = make_tuple(x,y,z);
+					grid._signals.push_back(tmp);
+					grid._points[tmp] = interpolate(tmp);
+				}
+			}
+		}
+	}
+	
+	// Resort signals
+	sort(grid._signals.begin(), grid._signals.end(), CompareSignals());
+}
+
+ActionTuple LerpSender::interpolate( SignalTuple t ) {
+	return interpolate(SEND_EWMA(t),REC_EWMA(t),RTT_RATIO(t));
+}
+ActionTuple LerpSender::interpolate( double obs_send_ewma, double obs_rec_ewma, double obs_rtt_ratio ) {
 	double x0min, x0max, x1min, x1max, x2min, x2max;
 
 	int i = 0;
@@ -192,7 +265,7 @@ void LerpSender::update_actions( const Memory memory )
            ((x0max - x0min) * (x1max - x1min) * (x2max - x2min))
          );
 
-  _the_window = min( max( 0, int( _the_window * window_multiplier + window_increment ) ), 1000000 );
-  _intersend_time = intersend;
+	return make_tuple(window_increment, window_multiplier, intersend);
 }
+
 /*****************************************************************************/

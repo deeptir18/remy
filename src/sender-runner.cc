@@ -88,6 +88,8 @@ int main( int argc, char *argv[] )
       if ( sender_type == "lerp" ) {
         is_lerp = true;
         fprintf( stderr, "Running lerp sender\n" );
+				grid = PointGrid();
+				printf("Created new point grid:\n%s\n",grid.str().c_str());
       }
     }
   }
@@ -112,7 +114,6 @@ int main( int argc, char *argv[] )
         print_tree< RemyBuffers::FinTree >(tree);
 			} else if ( is_lerp ) {
 				// TODO load this from file instead of creating blank one
-				grid = PointGrid();
       } else {
         RemyBuffers::WhiskerTree tree;
         if ( !tree.ParseFromFileDescriptor( fd ) ) {
@@ -176,6 +177,7 @@ int main( int argc, char *argv[] )
     Evaluator< WhiskerTree > eval( configuration_range );
     auto outcome = eval.score_lerp( grid, 10 );
     parse_outcome< Evaluator< WhiskerTree >::Outcome > ( outcome );
+		printf("Median: %s\n", _stuple_str(grid.get_median_signal()).c_str());
   } else {
     Evaluator< WhiskerTree > eval( configuration_range );
     auto outcome = eval.score( whiskers, false, 10 );

@@ -4,10 +4,15 @@
 #include <cassert>
 #include <vector>
 #include <string>
+#include <sstream>
 #include "memory.hh"
 #include "packet.hh"
 
 #include <unordered_map>
+
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/median.hpp>
 
 using namespace std;
 
@@ -15,6 +20,7 @@ using namespace std;
 #define MAX_REC_EWMA 163840
 #define MAX_RTT_RATIO 163840
 
+#define NUM_SIGNALS 3 
 typedef tuple<double,double,double> SignalTuple;
 #define SEND_EWMA(s) get <0>(s)
 #define REC_EWMA(s)  get <1>(s)
@@ -24,6 +30,11 @@ typedef tuple<double,double,double> ActionTuple;
 #define CWND_MULT(a) get <1>(a)
 #define MIN_SEND(a)  get <2>(a)
 typedef pair<SignalTuple,ActionTuple> Point;
+
+string _stuple_str( SignalTuple t );
+string _atuple_str( ActionTuple t );
+string _point_str( Point p );
+
 struct HashSignal{
 	size_t operator()(const SignalTuple& s) const{
 		return (
@@ -56,12 +67,29 @@ struct CompareSignals {
 
 class PointGrid 
 {
+
+private:
+	bool _track;
+	mutable vector< boost::accumulators::accumulator_set < double,
+									boost::accumulators::stats<
+									boost::accumulators::tag::median > > > _acc;
 public:
-	vector<SignalTuple> _signals;
-	SignalActionMap _points;
+	// can access these two directly for now
+	vector<SignalTuple> _signals; // list of values for each signal, used to calc which box we're in
+	SignalActionMap _points; // map of signal to action
+
 	PointGrid();
-	void add_points ( const vector<Point> points );
-	void set_point ( const Point point );
+	PointGrid( PointGrid & other ); 
+	
+	SignalActionMap::iterator begin();
+	SignalActionMap::iterator end();
+	int size(); 
+
+	string str();
+
+	void track( double s, double r, double t );
+	SignalTuple get_median_signal (); 
+
 };
 
 
@@ -83,28 +111,18 @@ private:
 
 public:
   LerpSender( PointGrid & grid );
-  void update_actions( const Memory memory );
-  void packets_received( const std::vector< Packet > & packets );
   void reset( const double & tickno ); /* start new flow */
+  void packets_received( const std::vector< Packet > & packets );
+  double next_event_time( const double & tickno ) const;
+  void update_actions( const Memory memory );
 
   template <class NextHop>
   void send( const unsigned int id, NextHop & next, const double & tickno );
-
   LerpSender & operator=( const LerpSender & ) { assert( false ); return *this; }
 
-  double next_event_time( const double & tickno ) const;
-
+	void add_inner_point ( const Point point, PointGrid & grid );
+	ActionTuple interpolate ( double s, double r, double t );
+	ActionTuple interpolate ( SignalTuple t );
 
 };
-
-	//double _known_points[2][2][2][3] = {
-		//{{{100 , 0.2  , 10},     // send_low rec_low rtt_low
-			//{50  , 0.01 , 1000}},  // send_low rec_low rtt_high
-		 //{{20  , 0.5  , 100},    // send_low rec_high rtt_low
-			//{10  , 0.4  , 2000}}}, // send_low rec_high rtt_high
-		//{{{70  , 0.01 , 200},    // send_high rec_low rtt_low
-			//{100 , 0.05 , 3000}},  // send_high rec_low rtt_high
-		 //{{50  , 0.1  , 500},    // send_high rec_high rtt_low
-			//{60  , 0.05 , 5000}}}  // send_high rec_high rtt_high
-	//};
 #endif
