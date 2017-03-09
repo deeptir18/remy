@@ -3,12 +3,6 @@
 
 #include "breeder.hh"
 #include <chrono>
-#define WINDOW_INCR 0
-#define WINDOW_MULT 1
-#define INTERSEND 2
-#define WINDOW_INCR_CHANGE 2
-#define WINDOW_MULT_CHANGE .01
-#define INTERSEND_CHANGE .1
 
 struct WhiskerImproverOptions
 {
@@ -121,6 +115,8 @@ private:
 	double  improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree, double score_to_beat);
 
   double evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval);
+
+	vector< Whisker > get_further_replacements( Whisker & whisker_to_improve, unordered_map< Direction, double, boost::hash< Direction > > direction_results );
 
   double evaluate_whisker( WhiskerTree &tree, Whisker replacement, Evaluator< WhiskerTree > eval);
 

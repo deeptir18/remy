@@ -8,6 +8,16 @@
 #include "action.hh"
 #include "dna.pb.h"
 
+#define WINDOW_INCR 0
+#define WINDOW_MULT 1
+#define INTERSEND 2
+
+#define WINDOW_INCR_CHANGE 2
+#define WINDOW_MULT_CHANGE .01
+#define INTERSEND_CHANGE .1
+
+typedef std::map< int, double > ActionChange;
+
 class Whisker : public Action {
 private:
   int _window_increment;
@@ -31,8 +41,11 @@ public:
   std::vector< Whisker > next_generation( bool optimize_window_increment, bool optimize_window_multiple, bool optimize_intersend ) const;
 
   Whisker  next_action( bool optimize_window_increment, bool optimize_window_multiple, bool optimize_intersend, double cur_value, double increment, bool neg )const;
-  std::string str( const unsigned int total=1 ) const;
-  
+
+	std::vector< Whisker > next_in_direction( ActionChange action_direction) const;
+
+	std::string str( const unsigned int total=1 ) const;
+
   RemyBuffers::Whisker DNA( void ) const;
   Whisker( const RemyBuffers::Whisker & dna );
   

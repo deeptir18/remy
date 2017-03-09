@@ -121,6 +121,7 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
     coordinates.emplace_back( plus );
     coordinates.emplace_back( minus );
   }
+	unordered_map< Direction, double, boost:: hash< Direction > > direction_results;
   // first evaluate initial 6 directions
   Direction best_dir = Direction( EQUALS, EQUALS, EQUALS );
   double best_score_change = 0;
@@ -131,9 +132,10 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
         best_dir = dir;
 				best_score_change = change;
       }
+			direction_results.insert( make_pair( dir, change ) );
     }
   }
-
+	vector< Whisker > further_replacements =  get_further_replacements( whisker_to_improve, direction_results );
   // iterate to find the best replacement of what we have so far
   for ( auto & x: scores ) {
     const Whisker& replacement( x.first );
@@ -206,6 +208,47 @@ size_t hash_value( const Direction& direction ) {
     return seed;
 }
 
+vector< Whisker >
+SmartBreeder::get_further_replacements( Whisker & whisker_to_improve, unordered_map< Direction, double, boost::hash< Direction > > direction_results )
+{
+	// parse through direction results to calculate the best direction to try
+	vector< Whisker > replacements;
+
+	Direction best_dir = Direction( EQUALS, EQUALS, EQUALS );
+	for ( int i = 0; i < 3; i ++ ) {
+		Direction plus = Direction( EQUALS, EQUALS, EQUALS );
+		Direction minus = Direction( EQUALS, EQUALS, EQUALS );
+		plus.replace( i, PLUS );
+		minus.replace( i, MINUS );
+
+		double best_change = 0;
+		if ( direction_results.find( plus ) != direction_results.end() ) {
+			if ( direction_results.at( plus ) > best_change ) {
+				best_dir.replace( i, PLUS );
+				best_change = direction_results.at( plus );
+			}
+		}
+		if ( direction_results.find( minus ) != direction_results.end() ) {
+			if ( direction_results.at( minus ) > best_change ) {
+				best_dir.replace( i, MINUS );
+				best_change = direction_results.at( minus );
+			}
+		}
+	}
+
+	if ( best_dir == Direction( EQUALS, EQUALS, EQUALS ) ) {
+		return replacements;
+	}
+
+	// generate a list of replacements to try based on the direction that was best
+	// construct an "ActionChange" Map -> look in whisker.hh
+	ActionChange actions;
+	actions[WINDOW_INCR] = ( best_dir.get_index( WINDOW_INCR ) == PLUS ) ? 1 : ( best_dir.get_index( WINDOW_INCR ) == EQUALS ) ? 0: -1;
+	actions[WINDOW_MULT] = ( best_dir.get_index( WINDOW_MULT ) == PLUS ) ? 1 : ( best_dir.get_index( WINDOW_MULT ) == EQUALS ) ? 0: -1;
+	actions[INTERSEND] = ( best_dir.get_index( INTERSEND ) == PLUS ) ? 1 : ( best_dir.get_index( INTERSEND ) == EQUALS ) ? 0: -1;
+	return whisker_to_improve.next_in_direction( actions );
+
+}
 double
 SmartBreeder::evaluate_whisker( WhiskerTree &tree, Whisker replacement, Evaluator< WhiskerTree > eval)
 {
@@ -220,9 +263,11 @@ SmartBreeder::evaluate_whisker( WhiskerTree &tree, Whisker replacement, Evaluato
     Evaluator<WhiskerTree>::Outcome outcome = eval.score_in_parallel( replaced_tree, trace, carefulness );
     double score = outcome.score;
     eval_cache_.insert( make_pair( replacement, score ) ); // add this to eval cache
+		printf(" Tried whisker: %s, got score: %f\n", replacement.str().c_str(), score );
     return score;
   } else {
     double cached_score = eval_cache_.at( replacement );
+		printf(" Tried whisker: %s, got score: %f\n", replacement.str().c_str(), cached_score );
     return cached_score;
   }
 }

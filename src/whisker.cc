@@ -117,12 +117,58 @@ Whisker Whisker::next_action( bool optimize_window_increment, bool optimize_wind
   new_whisker.round();
   return new_whisker;
 }
+vector< Whisker >
+Whisker::next_in_direction( ActionChange action_directions) const
+{
+	vector< Whisker > ret;
+	OptimizationSettings settings = get_optimizer();
+	vector< vector< double > > alternative_vals;
+	for ( int i = 0; i < 3; i ++ ) {
+		double min_change = ( i == WINDOW_INCR ) ? double(settings.window_increment.min_change) : ( i == WINDOW_MULT ) ? settings.window_multiple.min_change : settings.intersend.min_change;
+		double max_value = ( i == WINDOW_INCR ) ? double(settings.window_increment.max_value) : ( i == WINDOW_MULT ) ? settings.window_multiple.max_value : settings.intersend.max_value;
+		double min_value = ( i == WINDOW_INCR ) ? double(settings.window_increment.min_value) : ( i == WINDOW_MULT ) ? settings.window_multiple.min_value : settings.intersend.min_value;
+		double multiplier = ( i == WINDOW_INCR ) ? double(settings.window_increment.multiplier) : ( i == WINDOW_MULT ) ? settings.window_multiple.multiplier : settings.intersend.multiplier;
+		vector< double > alt;
+		double cur_value = ( i == WINDOW_INCR ) ? _window_increment: ( i == WINDOW_MULT ) ? _window_multiple : _intersend;
+		if ( action_directions[i] == 1 ) {
+			double max_change = max_value - cur_value;
+			for ( double change = min_change; change < max_change; change *= multiplier ) {
+				alt.emplace_back( cur_value + change );
+			}
+		} else if ( action_directions[i] == -1 ) {
+			double max_change = cur_value - min_value;
+			for ( double change = min_change; change < max_change; change *= multiplier ) {
+				alt.emplace_back( cur_value - change );
+			}
+		}
+		alternative_vals.emplace_back( alt );
+	}
 
+	// now go through and construct alternatives
+
+  for ( const auto & alt_window : alternative_vals.at( WINDOW_INCR ) ) {
+    for ( const auto & alt_multiple : alternative_vals.at( WINDOW_MULT ) ) {
+      for ( const auto & alt_intersend : alternative_vals.at( INTERSEND ) ) {
+        	Whisker new_whisker { *this };
+        	new_whisker._generation++;
+
+					new_whisker._window_increment = int(alt_window);
+					new_whisker._window_multiple = alt_multiple;
+					new_whisker._intersend = alt_intersend;
+
+					new_whisker.round();
+
+					ret.push_back( new_whisker );
+      }
+    }
+  }
+	return ret;
+}
 
 string Whisker::str( const unsigned int total ) const
 {
   char tmp[ 256 ];
-  snprintf( tmp, 256, "{%s} gen=%u usage=%.4f => (win=%d + %f * win, intersend=%f)",
+  snprintf( tmp, 256, "{%s} gen=%u usage=%.4f => (win=%d + %f * win, intersend=%f\n)",
 	    _domain.str().c_str(), _generation, double( _domain.count() ) / double( total ), _window_increment, _window_multiple, _intersend );
   return tmp;
 }
