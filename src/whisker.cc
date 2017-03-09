@@ -128,18 +128,25 @@ Whisker::next_in_direction( ActionChange action_directions) const
 		double max_value = ( i == WINDOW_INCR ) ? double(settings.window_increment.max_value) : ( i == WINDOW_MULT ) ? settings.window_multiple.max_value : settings.intersend.max_value;
 		double min_value = ( i == WINDOW_INCR ) ? double(settings.window_increment.min_value) : ( i == WINDOW_MULT ) ? settings.window_multiple.min_value : settings.intersend.min_value;
 		double multiplier = ( i == WINDOW_INCR ) ? double(settings.window_increment.multiplier) : ( i == WINDOW_MULT ) ? settings.window_multiple.multiplier : settings.intersend.multiplier;
+		double max_change = ( i == WINDOW_INCR ) ? double(settings.window_increment.max_change) : ( i == WINDOW_MULT ) ? settings.window_multiple.max_change : settings.intersend.max_change;
 		vector< double > alt;
 		double cur_value = ( i == WINDOW_INCR ) ? _window_increment: ( i == WINDOW_MULT ) ? _window_multiple : _intersend;
+		printf( "i value: %d, min_change: %f, max_value: %f, min_value: %f, multiplier: %f\n", i, min_change, max_value, min_value, multiplier );
+		assert( cur_value >= min_value && cur_value <= max_value );
 		if ( action_directions[i] == 1 ) {
-			double max_change = max_value - cur_value;
 			for ( double change = min_change; change < max_change; change *= multiplier ) {
-				alt.emplace_back( cur_value + change );
+				if ( cur_value + change < max_value ) {
+					alt.emplace_back( cur_value + change );
+				}
 			}
 		} else if ( action_directions[i] == -1 ) {
-			double max_change = cur_value - min_value;
 			for ( double change = min_change; change < max_change; change *= multiplier ) {
-				alt.emplace_back( cur_value - change );
+				if ( cur_value - change > min_value ) {
+					alt.emplace_back( cur_value - change );
+				}
 			}
+		} else {
+			alt.emplace_back( cur_value );
 		}
 		alternative_vals.emplace_back( alt );
 	}

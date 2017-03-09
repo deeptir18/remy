@@ -118,7 +118,7 @@ private:
 
 	vector< Whisker > get_further_replacements( Whisker & whisker_to_improve, unordered_map< Direction, double, boost::hash< Direction > > direction_results );
 
-  double evaluate_whisker( WhiskerTree &tree, Whisker replacement, Evaluator< WhiskerTree > eval, Whisker& whisker_to_improve, double score_to_beat);
+  double evaluate_whisker( WhiskerTree &tree, Whisker replacement, Evaluator< WhiskerTree > eval);
 
 
   unordered_map< Direction, vector< Whisker >, boost:: hash< Direction > > get_direction_bins( Whisker & whisker_to_improve );

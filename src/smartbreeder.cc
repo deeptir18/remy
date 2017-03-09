@@ -156,7 +156,11 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
 
 	vector< Whisker > further_replacements = get_further_replacements( whisker_to_improve, direction_results );
 	for ( Whisker& replacement: further_replacements ) {
-		score_to_beat = evaluate_whisker( tree, replacement, eval, whisker_to_improve, score_to_beat);
+		double score = evaluate_whisker( tree, replacement, eval);
+		if ( score > score_to_beat ) {
+			score_to_beat = score;
+			whisker_to_improve = replacement;
+		}
 	}
   printf("With score %f, chose %s\n", score_to_beat, whisker_to_improve.str().c_str() );
   return score_to_beat;
@@ -209,11 +213,14 @@ SmartBreeder::get_further_replacements( Whisker & whisker_to_improve, unordered_
 	actions[WINDOW_INCR] = ( best_dir.get_index( WINDOW_INCR ) == PLUS ) ? 1 : ( best_dir.get_index( WINDOW_INCR ) == EQUALS ) ? 0: -1;
 	actions[WINDOW_MULT] = ( best_dir.get_index( WINDOW_MULT ) == PLUS ) ? 1 : ( best_dir.get_index( WINDOW_MULT ) == EQUALS ) ? 0: -1;
 	actions[INTERSEND] = ( best_dir.get_index( INTERSEND ) == PLUS ) ? 1 : ( best_dir.get_index( INTERSEND ) == EQUALS ) ? 0: -1;
-	return whisker_to_improve.next_in_direction( actions );
+
+	vector< Whisker > ret = whisker_to_improve.next_in_direction( actions );
+	printf("The size of the next in direction vector is %f\n", double( ret.size() ) );
+	return ret;
 
 }
 double
-SmartBreeder::evaluate_whisker( WhiskerTree &tree, Whisker replacement, Evaluator< WhiskerTree > eval, Whisker& whisker_to_improve, double score_to_beat)
+SmartBreeder::evaluate_whisker( WhiskerTree &tree, Whisker replacement, Evaluator< WhiskerTree > eval)
 {
   // returns the score from evaluating  single whisker
 	bool trace = false;
@@ -227,21 +234,14 @@ SmartBreeder::evaluate_whisker( WhiskerTree &tree, Whisker replacement, Evaluato
     double score = outcome.score;
     eval_cache_.insert( make_pair( replacement, score ) ); // add this to eval cache
 		printf(" Tried whisker: %s, got score: %f\n", replacement.str().c_str(), score );
-		if ( score > score_to_beat ) {
-			whisker_to_improve = replacement;
-			score_to_beat = score;
-		}
-    return score_to_beat;
+    return score;
   } else {
     double cached_score = eval_cache_.at( replacement );
-		printf(" Tried whisker: %s, got score: %f\n", replacement.str().c_str(), cached_score );
-		if ( cached_score > score_to_beat ) {
-			whisker_to_improve = replacement;
-			score_to_beat = cached_score;
-		}
-    return score_to_beat;
+		printf(" Tried whisker: %s, got score: %f; was in EVAL CACHE\n", replacement.str().c_str(), cached_score );
+    return cached_score;
   }
 }
+
 double
 SmartBreeder::evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval)
 {
