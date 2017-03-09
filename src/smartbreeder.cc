@@ -202,7 +202,7 @@ SmartBreeder::get_further_replacements( Whisker & whisker_to_improve, unordered_
 	if ( best_dir == Direction( EQUALS, EQUALS, EQUALS ) ) {
 		return replacements;
 	}
-
+	printf("The goal direction is %s\n", best_dir.str().c_str() );
 	// generate a list of replacements to try based on the direction that was best
 	// construct an "ActionChange" Map -> look in whisker.hh
 	ActionChange actions;
