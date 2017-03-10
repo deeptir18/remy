@@ -138,7 +138,6 @@ void LerpSender::packets_received( const vector< Packet > & packets ) {
   _largest_ack = max( packets.at( packets.size() - 1 ).seq_num, _largest_ack );
   _the_window = max( INITIAL_WINDOW, _the_window );
   _memory.packets_received( packets, _flow_id, _largest_ack );
-	printf("size: %d\n", _grid.size());
 
   update_actions( _memory );
 }
@@ -202,16 +201,14 @@ ActionTuple LerpSender::interpolate( double obs_send_ewma, double obs_rec_ewma, 
 
 	int i = 0;
 	while (SEND_EWMA(_grid._signals[i]) < obs_send_ewma) { i++; }
-	x0min = SEND_EWMA(_grid._signals[i-1]);
-	x0max = SEND_EWMA(_grid._signals[i]);
+	x0min = SEND_EWMA(_grid._signals[max(i-1,0)]);
+	x0max = SEND_EWMA(_grid._signals[max(i,1)]);
 	while (REC_EWMA(_grid._signals[i]) < obs_rec_ewma) { i++; }
-	x1min = REC_EWMA(_grid._signals[i-1]);
-	x1max = REC_EWMA(_grid._signals[i]);
+	x1min = REC_EWMA(_grid._signals[max(i-1,0)]);
+	x1max = REC_EWMA(_grid._signals[max(i,1)]);
 	while (RTT_RATIO(_grid._signals[i]) < obs_rtt_ratio) { i++; }
-	x2min = RTT_RATIO(_grid._signals[i-1]);
-	x2max = RTT_RATIO(_grid._signals[i]);
-
-	printf("%f-%f %f-%f %f-%f\n", x0min,x0max, x1min,x1max, x2min,x2max);
+	x2min = RTT_RATIO(_grid._signals[max(i-1,0)]);
+	x2max = RTT_RATIO(_grid._signals[max(i,1)]);
 
   double x0_max_t = (x0max - obs_send_ewma),
          x0_t_min = (obs_send_ewma - x0min),
