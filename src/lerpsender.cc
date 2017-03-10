@@ -31,8 +31,9 @@ static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 	}
 	// Keep a sorted vector of the 3D coordinates to assist in finding the
 	// bounding box when interpolating
-	for ( auto it = _points.begin(); it != _points.end(); ++it ) {
-		_signals.push_back(it->first);
+	int i = 0;
+	for ( auto it = _points.begin(); it != _points.end(); ++it,i++ ) {
+		_signals[i] = (it->first);
 	}
 	sort(_signals.begin(), _signals.end(), CompareSignals());
 }
@@ -137,6 +138,7 @@ void LerpSender::packets_received( const vector< Packet > & packets ) {
   _largest_ack = max( packets.at( packets.size() - 1 ).seq_num, _largest_ack );
   _the_window = max( INITIAL_WINDOW, _the_window );
   _memory.packets_received( packets, _flow_id, _largest_ack );
+	printf("size: %d\n", _grid.size());
 
   update_actions( _memory );
 }
@@ -208,6 +210,8 @@ ActionTuple LerpSender::interpolate( double obs_send_ewma, double obs_rec_ewma, 
 	while (RTT_RATIO(_grid._signals[i]) < obs_rtt_ratio) { i++; }
 	x2min = RTT_RATIO(_grid._signals[i-1]);
 	x2max = RTT_RATIO(_grid._signals[i]);
+
+	printf("%f-%f %f-%f %f-%f\n", x0min,x0max, x1min,x1max, x2min,x2max);
 
   double x0_max_t = (x0max - obs_send_ewma),
          x0_t_min = (obs_send_ewma - x0min),
