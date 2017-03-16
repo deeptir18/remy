@@ -39,8 +39,8 @@ static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 }
 
 // Copy constructor
-PointGrid::PointGrid( PointGrid & other )
-	:	_track( other._track ),
+PointGrid::PointGrid( PointGrid & other, bool track )
+	:	_track( track ),
 		_acc( other._acc ),
 	  _signals( other._signals ),
 	  _points( other._points )
@@ -112,32 +112,33 @@ SignalTuple PointGrid::get_median_signal() {
 /*****************************************************************************/
 LerpSender::LerpSender(PointGrid & grid)
   :  _grid( grid ),
+     _memory(),
 		 _packets_sent( 0 ),
      _packets_received( 0 ),
      _last_send_time( 0 ),
      _the_window( INITIAL_WINDOW ),
      _intersend_time( 0 ),
      _flow_id( 0 ),
-     _memory(),
      _largest_ack( -1 )
 {}
 
 void LerpSender::reset( const double & )
 {
-  _the_window = INITIAL_WINDOW;
-  _last_send_time = 0;
-  _flow_id++;
-  _intersend_time = 0;
-  _largest_ack = _packets_sent - 1;
    _memory.reset();
+  _last_send_time = 0;
+  _the_window = 0;
+  _intersend_time = 0;
+  _flow_id++;
+  _largest_ack = _packets_sent - 1;
   assert( _flow_id != 0 );
+
+  update_actions( _memory );
 }
 
 void LerpSender::packets_received( const vector< Packet > & packets ) {
   _packets_received += packets.size();
-  _largest_ack = max( packets.at( packets.size() - 1 ).seq_num, _largest_ack );
-  _the_window = max( INITIAL_WINDOW, _the_window );
   _memory.packets_received( packets, _flow_id, _largest_ack );
+  _largest_ack = max( packets.at( packets.size() - 1 ).seq_num, _largest_ack );
 
   update_actions( _memory );
 }
@@ -166,7 +167,7 @@ void LerpSender::update_actions( const Memory memory )
 
 	ActionTuple a = interpolate( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio );
 
-  _the_window = min( max( 0, int( _the_window * CWND_MULT(a) + CWND_INC(a) ) ), 1000000 );
+  _the_window = min( max( 0.0,  _the_window * CWND_MULT(a) + CWND_INC(a)  ), 1000000.0 );
   _intersend_time = MIN_SEND(a);
 }
 

@@ -16,9 +16,9 @@
 
 using namespace std;
 
-#define MAX_SEND_EWMA 163840
-#define MAX_REC_EWMA 163840
-#define MAX_RTT_RATIO 163840
+#define MAX_SEND_EWMA 1000
+#define MAX_REC_EWMA 1000
+#define MAX_RTT_RATIO 1000
 
 #define NUM_SIGNALS 3 
 typedef tuple<double,double,double> SignalTuple;
@@ -30,6 +30,10 @@ typedef tuple<double,double,double> ActionTuple;
 #define CWND_MULT(a) get <1>(a)
 #define MIN_SEND(a)  get <2>(a)
 typedef pair<SignalTuple,ActionTuple> Point;
+
+#define DEFAULT_INCR 1
+#define DEFAULT_MULT 1
+#define DEFAULT_SEND 3
 
 string _stuple_str( SignalTuple t );
 string _atuple_str( ActionTuple t );
@@ -79,8 +83,8 @@ public:
 	SignalActionMap _points; // map of signal to action
 
 	PointGrid( bool track = false );
-	PointGrid( PointGrid & other ); 
-	
+	PointGrid( PointGrid & other, bool track );
+
 	SignalActionMap::iterator begin();
 	SignalActionMap::iterator end();
 	int size(); 
@@ -97,13 +101,13 @@ class LerpSender
 {
 private:
 	PointGrid & _grid;
+  Memory _memory;
   unsigned int _packets_sent, _packets_received;
   double _last_send_time;
   /* _the_window is the congestion window */
   double _the_window;
   double _intersend_time;
   unsigned int _flow_id;
-  Memory _memory;
 
   /* Largest ACK so far */
   int _largest_ack;
