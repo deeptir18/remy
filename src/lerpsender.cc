@@ -17,16 +17,9 @@ static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 	PointGrid::PointGrid( bool track )
 	:	 _track ( track ),
 		 _acc ( NUM_SIGNALS ), // if true, accumulates all signals here
-	   _signals( ( (int) pow( 2, NUM_SIGNALS ) ) ),
 	   _points( ),
-     _signal_values( )
+     _signals( NUM_SIGNALS )
 {
-  vector< double > send_ewma_vals;
-  vector< double > rec_ewma_vals;
-  vector< double > rtt_ratio_vals;
-  _signal_values.emplace_back( send_ewma_vals );
-  _signal_values.emplace_back( rec_ewma_vals );
-  _signal_values.emplace_back( rtt_ratio_vals );
 	// Default values: set all 8 corners of the box to the default action
 	for ( int i = 0; i <= MAX_SEND_EWMA; i += MAX_SEND_EWMA) {
 		for ( int j = 0; j <= MAX_REC_EWMA; j += MAX_REC_EWMA) {
@@ -36,32 +29,17 @@ static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 			}
 		}
 	}
-	// Keep a sorted vector of the 3D coordinates to assist in finding the
-	// bounding box when interpolating
-	int i = 0;
-	for ( auto it = _points.begin(); it != _points.end(); ++it,i++ ) {
-    SignalTuple signal = it->first;
-		_signals[i] = (signal);
-    for ( int j = 0; j < 3; j ++ ) {
-      vector< double > vals = _signal_values.at( j );
-      double val =  ( i == 0 ) ? SEND_EWMA( signal ) : ( i == 1 ) ? REC_EWMA( signal ) : RTT_RATIO( signal );
-      if ( find( vals.begin(), vals.end(), val ) == vals.end() ) {
-        vals.emplace_back( val );
-      }
-      sort( vals.begin(), vals.end() );
-      _signal_values.at( j ) = vals;
-    }
-	}
-	sort(_signals.begin(), _signals.end(), CompareSignals());
+	_signals[0] = { 0, MAX_SEND_EWMA };
+	_signals[1] = { 0, MAX_REC_EWMA };
+	_signals[2] = { 0, MAX_RTT_RATIO };
 }
 
 // Copy constructor
 PointGrid::PointGrid( PointGrid & other, bool track )
 	:	_track( track ),
 		_acc( other._acc ),
-	  _signals( other._signals ),
 	  _points( other._points ),
-    _signal_values( other._signal_values )
+	  _signals( other._signals )
 {}
 
 // For iterating through all points in the grid
@@ -192,72 +170,75 @@ void LerpSender::add_inner_point( const Point point, PointGrid & grid ) {
 	// Add inner point
 	grid._points[point.first] = point.second;
 
+	// Find enclosing box
+	double x0min, x0max, x1min, x1max, x2min, x2max;
+	double obs_send_ewma, obs_rec_ewma, obs_rtt_ratio;
+
+	tie (obs_send_ewma, obs_rec_ewma, obs_rtt_ratio) = point.first;
+
+  int i = 0;
+  while ( obs_send_ewma < _grid._signals[0][i] ) { i ++; }
+  x0min = _grid._signals[0][ max( i, 0 ) ];
+  x0max = _grid._signals[0][ min( i+1, int(_grid._signals[0].size() -  1) ) ];
+
+  i = 0;
+  while ( obs_rec_ewma < _grid._signals[1][i] ) { i ++; }
+  x1min = _grid._signals[1][ max( i, 0 ) ];
+  x1max = _grid._signals[1][ min( i+1, int(_grid._signals[1].size() - 1) ) ];
+
+  i = 0;
+  while ( obs_rtt_ratio < _grid._signals[2][i] ) { i ++; }
+  x2min = _grid._signals[2][ max( i, 0 ) ];
+  x2max = _grid._signals[2][ min( i+1, int(_grid._signals[2].size() - 1) ) ];
+
 	// Add all side points
-	for (double &x : vector<double>{0,SEND_EWMA(point.first),MAX_SEND_EWMA}) {
-		for (double &y : vector<double>{0,REC_EWMA(point.first),MAX_REC_EWMA}) {
-			for (double &z : vector<double>{0,RTT_RATIO(point.first),MAX_RTT_RATIO}) {
+	for (double &x : vector<double>{x0min,SEND_EWMA(point.first),x0max}) {
+		for (double &y : vector<double>{x1min,REC_EWMA(point.first),x1max}) {
+			for (double &z : vector<double>{x2min,RTT_RATIO(point.first),x2max}) {
 				if ( ( x == SEND_EWMA(point.first ) ) || 
 						 ( y == REC_EWMA(point.first ) )  || 
 						 ( z == RTT_RATIO(point.first ) ) ) {
 					SignalTuple tmp = make_tuple(x,y,z);
-					grid._signals.push_back(tmp);
 					grid._points[tmp] = interpolate(tmp);
-          vector< double > send_ewma_vals = grid._signal_values.at( 0 );
-          if ( find( send_ewma_vals.begin(), send_ewma_vals.end(), x ) == send_ewma_vals.end() ) {
-            send_ewma_vals.emplace_back( x );
-            grid._signal_values.at( 0 ) = send_ewma_vals;
-          }
-          vector< double > rec_ewma_vals = grid._signal_values.at( 1 );
-          if ( find( rec_ewma_vals.begin(), rec_ewma_vals.end(), x ) == rec_ewma_vals.end() ) {
-            rec_ewma_vals.emplace_back( x );
-            grid._signal_values.at( 1 ) = rec_ewma_vals;
-          }
-          vector< double > rtt_ratio_vals = grid._signal_values.at( 2 );
-          if ( find( rtt_ratio_vals.begin(), rtt_ratio_vals.end(), x ) == rtt_ratio_vals.end() ) {
-            rtt_ratio_vals.emplace_back( x );
-            grid._signal_values.at( 2 ) = rtt_ratio_vals;
-           }
-          }
+					if (find( grid._signals[0].begin(), grid._signals[0].end(), x ) == grid._signals[0].end()) {
+						grid._signals[0].push_back( x );
+					}
+					if (find( grid._signals[1].begin(), grid._signals[1].end(), y ) == grid._signals[1].end()) {
+						grid._signals[1].push_back( y );
+					}
+					if (find( grid._signals[2].begin(), grid._signals[2].end(), z ) == grid._signals[2].end()) {
+						grid._signals[2].push_back( z );
+					}
 				}
 			}
 		}
-	// Resort signals
-	sort(grid._signals.begin(), grid._signals.end(), CompareSignals());
-  for ( int i = 0; i < 3; i ++ ) {
-    vector< double > vals = grid._signal_values.at( i );
-    sort( vals.begin(), vals.end() );
-    grid._signal_values.at( i ) = vals;
-  }
+	}
+
+	// TODO sort signals arrays
+	//
 }
 
 ActionTuple LerpSender::interpolate( SignalTuple t ) {
 	return interpolate(SEND_EWMA(t),REC_EWMA(t),RTT_RATIO(t));
 }
+
 ActionTuple LerpSender::interpolate( double obs_send_ewma, double obs_rec_ewma, double obs_rtt_ratio ) {
 	double x0min, x0max, x1min, x1max, x2min, x2max;
 
-  vector< double > send_ewma_vals;
-  vector< double > rec_ewma_vals;
-  vector< double > rtt_ratio_vals;
-
-  send_ewma_vals = _grid._signal_values.at( 0 );
-  rec_ewma_vals = _grid._signal_values.at( 1 );
-  rtt_ratio_vals =_grid._signal_values.at( 2 );
-
   int i = 0;
-  while ( obs_send_ewma < send_ewma_vals.at( i ) ) { i ++; }
-  x0min = send_ewma_vals.at( max( i, 0 ) );
-  x0max = send_ewma_vals.at( min( i+1, int(send_ewma_vals.size() -  1) ) );
+  while ( obs_send_ewma < _grid._signals[0][i] ) { i ++; }
+  x0min = _grid._signals[0][ max( i, 0 ) ];
+  x0max = _grid._signals[0][ min( i+1, int(_grid._signals[0].size() -  1) ) ];
 
   i = 0;
-  while ( obs_rec_ewma < rec_ewma_vals.at( i ) ) { i ++; }
-  x1min = rec_ewma_vals.at( max( i, 0 ) );
-  x1max = rec_ewma_vals.at( min( i+1, int(rec_ewma_vals.size() - 1) ) );
+  while ( obs_rec_ewma < _grid._signals[1][i] ) { i ++; }
+  x1min = _grid._signals[1][ max( i, 0 ) ];
+  x1max = _grid._signals[1][ min( i+1, int(_grid._signals[1].size() - 1) ) ];
 
   i = 0;
-  while ( obs_rtt_ratio < rtt_ratio_vals.at( i ) ) { i ++; }
-  x2min = rtt_ratio_vals.at( max( i, 0 ) );
-  x2max = rtt_ratio_vals.at( min( i+1, int(rtt_ratio_vals.size() - 1) ) );
+  while ( obs_rtt_ratio < _grid._signals[2][i] ) { i ++; }
+  x2min = _grid._signals[2][ max( i, 0 ) ];
+  x2max = _grid._signals[2][ min( i+1, int(_grid._signals[2].size() - 1) ) ];
 
   double x0_max_t = (x0max - obs_send_ewma),
          x0_t_min = (obs_send_ewma - x0min),
