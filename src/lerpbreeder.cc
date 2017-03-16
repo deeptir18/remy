@@ -7,6 +7,7 @@ Evaluator< WhiskerTree >::Outcome LerpBreeder::improve( PointGrid & grid )
 	PointGrid input_grid( grid, false ); // make sure we don't regress
 	Evaluator< WhiskerTree > eval ( _config_range );
 	double score_to_beat = (eval.score_lerp( grid, _carefulness )).score;
+	printf("Initial score to beat is %f\n", score_to_beat );
 	if ( (check_bootstrap( grid )) ) {
 		printf("Trying to optimize the 8 initial points\n");
 		for ( SignalActionMap::iterator it  = grid.begin(); it != grid.end(); ++it ) {
