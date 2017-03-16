@@ -12,9 +12,11 @@ Evaluator< WhiskerTree >::Outcome LerpBreeder::improve( PointGrid & grid )
 		printf("Trying to optimize the 8 initial points\n");
 		for ( SignalActionMap::iterator it  = grid.begin(); it != grid.end(); ++it ) {
 			SignalTuple signal = it->first;
+      if ( signal == make_tuple( 0,0,0 ) ) {
 			ActionScore opt_action = optimize_point_parallel( signal, grid, score_to_beat );
 			grid._points[signal] = opt_action.first; // replace action
 			score_to_beat = opt_action.second;
+      }
 	  }
 
 	} else {
@@ -99,9 +101,9 @@ LerpBreeder::optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< Wh
 	for ( ActionTuple & a: replacements ) {
 		PointGrid test_grid( grid, false );
 		test_grid._points[signal] = a;
-		printf("REPLACED test grid to have %s->%s\n", _stuple_str( signal ).c_str(), _atuple_str( test_grid._points[signal] ).c_str() );
+		//printf("REPLACED test grid to have %s->%s\n", _stuple_str( signal ).c_str(), _atuple_str( test_grid._points[signal] ).c_str() );
 		double score = ( eval.score_lerp( test_grid, _carefulness ) ).score;
-		printf("Evaluated signal->action: %s -> %s; score: %f\n", _stuple_str( signal).c_str(), _atuple_str( test_grid._points[signal] ).c_str(), score);
+		//printf("Evaluated signal->action: %s -> %s; score: %f\n", _stuple_str( signal).c_str(), _atuple_str( test_grid._points[signal] ).c_str(), score);
 		printf("\n");
 		if ( score > current_score ) {
 			current_score = score;
@@ -115,7 +117,9 @@ LerpBreeder::optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< Wh
 double
 single_simulation( PointGrid grid, Evaluator< WhiskerTree > eval, int carefulness )
 {
-	return ( eval.score_lerp( grid, carefulness ).score );
+	double score = ( eval.score_lerp( grid, carefulness ).score );
+  printf("SCORE AFTER SINGLE SIMULATION IS %f\n", score );
+  return score;
 }
 
 ActionScore
@@ -125,21 +129,21 @@ LerpBreeder::optimize_point_parallel( SignalTuple signal, PointGrid & grid, doub
 	ActionTuple original_action = grid._points[signal];
 	ActionTuple best_action = original_action;
 	Point point = make_pair( signal, original_action );
+  printf("OPTIMIZING SIGNAL %s\n", _stuple_str( signal ).c_str() );
 	vector< ActionTuple > replacements = get_replacements( point );
 	int index = 0;
 	for ( ActionTuple & a: replacements ) {
-		printf("Spawning thread for eval replacements\n");
 		PointGrid test_grid( grid, false);
 		test_grid._points[signal] = a;
 		Evaluator< WhiskerTree > eval2( _config_range );
 		replacement_scores.emplace_back( a, async(launch::async, single_simulation, test_grid, eval2, _carefulness ) );
-		printf("Tried out replacement %d, signal %s -> action %s\n", index, _stuple_str( signal).c_str(), _atuple_str( a ).c_str() );
 		index++;
 	}
 
 	for ( auto & x: replacement_scores ) {
 		const ActionTuple  replacement( x.first );
 		double score( x.second.get() );
+    printf("Replacement %s -> score %f\n", _atuple_str( replacement).c_str(), score );
 		if ( score > current_score ) {
 			current_score = score;
 			best_action = replacement;
