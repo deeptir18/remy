@@ -18,8 +18,15 @@ static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 	:	 _track ( track ),
 		 _acc ( NUM_SIGNALS ), // if true, accumulates all signals here
 	   _signals( ( (int) pow( 2, NUM_SIGNALS ) ) ),
-	   _points( )
+	   _points( ),
+     _signal_values( )
 {
+  vector< double > send_ewma_vals;
+  vector< double > rec_ewma_vals;
+  vector< double > rtt_ratio_vals;
+  _signal_values.emplace_back( send_ewma_vals );
+  _signal_values.emplace_back( rec_ewma_vals );
+  _signal_values.emplace_back( rtt_ratio_vals );
 	// Default values: set all 8 corners of the box to the default action
 	for ( int i = 0; i <= MAX_SEND_EWMA; i += MAX_SEND_EWMA) {
 		for ( int j = 0; j <= MAX_REC_EWMA; j += MAX_REC_EWMA) {
@@ -33,7 +40,17 @@ static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 	// bounding box when interpolating
 	int i = 0;
 	for ( auto it = _points.begin(); it != _points.end(); ++it,i++ ) {
-		_signals[i] = (it->first);
+    SignalTuple signal = it->first;
+		_signals[i] = (signal);
+    for ( int j = 0; j < 3; j ++ ) {
+      vector< double > vals = _signal_values.at( j );
+      double val =  ( i == 0 ) ? SEND_EWMA( signal ) : ( i == 1 ) ? REC_EWMA( signal ) : RTT_RATIO( signal );
+      if ( find( vals.begin(), vals.end(), val ) == vals.end() ) {
+        vals.emplace_back( val );
+      }
+      sort( vals.begin(), vals.end() );
+      _signal_values.at( j ) = vals;
+    }
 	}
 	sort(_signals.begin(), _signals.end(), CompareSignals());
 }
@@ -43,7 +60,8 @@ PointGrid::PointGrid( PointGrid & other, bool track )
 	:	_track( track ),
 		_acc( other._acc ),
 	  _signals( other._signals ),
-	  _points( other._points )
+	  _points( other._points ),
+    _signal_values( other._signal_values )
 {}
 
 // For iterating through all points in the grid
@@ -162,7 +180,6 @@ void LerpSender::update_actions( const Memory memory )
   double obs_send_ewma = (double)(memory.field( 0 ) );
   double obs_rec_ewma = (double)(memory.field( 1 ) );
   double obs_rtt_ratio = (double)(memory.field( 2 ) );
-
 	_grid.track( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio );
 
 	ActionTuple a = interpolate( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio );
@@ -185,13 +202,32 @@ void LerpSender::add_inner_point( const Point point, PointGrid & grid ) {
 					SignalTuple tmp = make_tuple(x,y,z);
 					grid._signals.push_back(tmp);
 					grid._points[tmp] = interpolate(tmp);
+          vector< double > send_ewma_vals = grid._signal_values.at( 0 );
+          if ( find( send_ewma_vals.begin(), send_ewma_vals.end(), x ) == send_ewma_vals.end() ) {
+            send_ewma_vals.emplace_back( x );
+            grid._signal_values.at( 0 ) = send_ewma_vals;
+          }
+          vector< double > rec_ewma_vals = grid._signal_values.at( 1 );
+          if ( find( rec_ewma_vals.begin(), rec_ewma_vals.end(), x ) == rec_ewma_vals.end() ) {
+            rec_ewma_vals.emplace_back( x );
+            grid._signal_values.at( 1 ) = rec_ewma_vals;
+          }
+          vector< double > rtt_ratio_vals = grid._signal_values.at( 2 );
+          if ( find( rtt_ratio_vals.begin(), rtt_ratio_vals.end(), x ) == rtt_ratio_vals.end() ) {
+            rtt_ratio_vals.emplace_back( x );
+            grid._signal_values.at( 2 ) = rtt_ratio_vals;
+           }
+          }
 				}
 			}
 		}
-	}
-	
 	// Resort signals
 	sort(grid._signals.begin(), grid._signals.end(), CompareSignals());
+  for ( int i = 0; i < 3; i ++ ) {
+    vector< double > vals = grid._signal_values.at( i );
+    sort( vals.begin(), vals.end() );
+    grid._signal_values.at( i ) = vals;
+  }
 }
 
 ActionTuple LerpSender::interpolate( SignalTuple t ) {
@@ -200,16 +236,28 @@ ActionTuple LerpSender::interpolate( SignalTuple t ) {
 ActionTuple LerpSender::interpolate( double obs_send_ewma, double obs_rec_ewma, double obs_rtt_ratio ) {
 	double x0min, x0max, x1min, x1max, x2min, x2max;
 
-	int i = 0;
-	while (SEND_EWMA(_grid._signals[i]) < obs_send_ewma) { i++; }
-	x0min = SEND_EWMA(_grid._signals[max(i-1,0)]);
-	x0max = SEND_EWMA(_grid._signals[max(i,1)]);
-	while (REC_EWMA(_grid._signals[i]) < obs_rec_ewma) { i++; }
-	x1min = REC_EWMA(_grid._signals[max(i-1,0)]);
-	x1max = REC_EWMA(_grid._signals[max(i,1)]);
-	while (RTT_RATIO(_grid._signals[i]) < obs_rtt_ratio) { i++; }
-	x2min = RTT_RATIO(_grid._signals[max(i-1,0)]);
-	x2max = RTT_RATIO(_grid._signals[max(i,1)]);
+  vector< double > send_ewma_vals;
+  vector< double > rec_ewma_vals;
+  vector< double > rtt_ratio_vals;
+
+  send_ewma_vals = _grid._signal_values.at( 0 );
+  rec_ewma_vals = _grid._signal_values.at( 1 );
+  rtt_ratio_vals =_grid._signal_values.at( 2 );
+
+  int i = 0;
+  while ( obs_send_ewma < send_ewma_vals.at( i ) ) { i ++; }
+  x0min = send_ewma_vals.at( max( i, 0 ) );
+  x0max = send_ewma_vals.at( min( i+1, int(send_ewma_vals.size() -  1) ) );
+
+  i = 0;
+  while ( obs_rec_ewma < rec_ewma_vals.at( i ) ) { i ++; }
+  x1min = rec_ewma_vals.at( max( i, 0 ) );
+  x1max = rec_ewma_vals.at( min( i+1, int(rec_ewma_vals.size() - 1) ) );
+
+  i = 0;
+  while ( obs_rtt_ratio < rtt_ratio_vals.at( i ) ) { i ++; }
+  x2min = rtt_ratio_vals.at( max( i, 0 ) );
+  x2max = rtt_ratio_vals.at( min( i+1, int(rtt_ratio_vals.size() - 1) ) );
 
   double x0_max_t = (x0max - obs_send_ewma),
          x0_t_min = (obs_send_ewma - x0min),
@@ -218,7 +266,7 @@ ActionTuple LerpSender::interpolate( double obs_send_ewma, double obs_rec_ewma, 
          x2_max_t = (x2max - obs_rtt_ratio),
          x2_t_min = (obs_rtt_ratio - x2min);
 
-	vector<ActionTuple> actions = {
+  vector<ActionTuple> actions = {
 		_grid._points[make_tuple(x0min, x1min, x2min)],
 		_grid._points[make_tuple(x0min, x1min, x2max)],
 		_grid._points[make_tuple(x0min, x1max, x2min)],

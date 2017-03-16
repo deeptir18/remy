@@ -81,7 +81,7 @@ public:
 	// can access these two directly for now
 	vector<SignalTuple> _signals; // list of values for each signal, used to calc which box we're in
 	SignalActionMap _points; // map of signal to action
-
+  vector< vector< double > > _signal_values; // list of values for signal
 	PointGrid( bool track = false );
 	PointGrid( PointGrid & other, bool track );
 
