@@ -111,6 +111,7 @@ Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score_lerp_parallel(
   /* run simulation */
   for ( auto &x : configs ) {
 		PointGrid test_grid( grid, false);
+		//printf("Spawning thread for config %s\n", x.str().c_str() );
 		config_scores.emplace_back( x, async( launch::async, single_simulation, x, test_grid, run_prng, ticks_to_run ));
   }
   for ( auto &x: config_scores ) {
@@ -118,6 +119,7 @@ Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score_lerp_parallel(
     NetConfig config = x.first;
     pair< double, vector < pair < double, double > > > result = x.second.get();
     double score = result.first;
+		//printf("Score from config %s is %f\n", config.str().c_str(), score );
     the_outcome.score += score;
     the_outcome.throughputs_delays.emplace_back( config, result.second );
   }
@@ -373,7 +375,7 @@ typename Evaluator< T >::Outcome Evaluator< T >::score_lerp( PointGrid & grid, c
 template <typename T>
 typename Evaluator< T >::Outcome Evaluator< T >::score_lerp_parallel( PointGrid & grid, const double carefulness ) const
 {
-  return score_lerp( grid, _prng_seed, _configs, _tick_count * carefulness );
+  return score_lerp_parallel( grid, _prng_seed, _configs, _tick_count * carefulness );
 }
 
 

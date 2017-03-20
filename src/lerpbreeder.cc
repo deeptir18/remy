@@ -13,7 +13,7 @@ Evaluator< WhiskerTree >::Outcome LerpBreeder::improve( PointGrid & grid )
 		for ( SignalActionMap::iterator it  = grid.begin(); it != grid.end(); ++it ) {
 			SignalTuple signal = it->first;
       if ( signal == make_tuple( 0,0,0 ) ) {
-			ActionScore opt_action = optimize_point_parallel( signal, grid, score_to_beat );
+			ActionScore opt_action = optimize_point( signal, grid, eval, score_to_beat );
 			grid._points[signal] = opt_action.first; // replace action
 			score_to_beat = opt_action.second;
       }
@@ -40,7 +40,8 @@ LerpBreeder::optimize_new_median( SignalTuple median, PointGrid & original_grid,
 	// add the median point, with the interpolated action, to the grid
 	sender.add_inner_point( median_pt, grid );
 	printf("GRID AFTER ADDING PT: \n%s\n", grid.str().c_str() );
-	ActionScore best_new_action = optimize_point_parallel( median, grid, current_score );
+	Evaluator< WhiskerTree > eval( _config_range );
+	ActionScore best_new_action = optimize_point( median, grid, eval, current_score );
 	assert ( best_new_action.second >= current_score );
 
 	// modify the grid to contain the new median point, and return the score
@@ -101,9 +102,9 @@ LerpBreeder::optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< Wh
 	for ( ActionTuple & a: replacements ) {
 		PointGrid test_grid( grid, false );
 		test_grid._points[signal] = a;
-		//printf("REPLACED test grid to have %s->%s\n", _stuple_str( signal ).c_str(), _atuple_str( test_grid._points[signal] ).c_str() );
-		double score = ( eval.score_lerp( test_grid, _carefulness ) ).score;
-		//printf("Evaluated signal->action: %s -> %s; score: %f\n", _stuple_str( signal).c_str(), _atuple_str( test_grid._points[signal] ).c_str(), score);
+		printf("REPLACED test grid to have %s->%s\n", _stuple_str( signal ).c_str(), _atuple_str( test_grid._points[signal] ).c_str() );
+		double score = ( eval.score_lerp_parallel( test_grid, _carefulness ) ).score;
+		printf("Evaluated signal->action: %s -> %s; score: %f\n", _stuple_str( signal).c_str(), _atuple_str( test_grid._points[signal] ).c_str(), score);
 		printf("\n");
 		if ( score > current_score ) {
 			current_score = score;
