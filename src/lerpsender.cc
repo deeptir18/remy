@@ -52,7 +52,7 @@ SignalActionMap::iterator PointGrid::end() {
 
 // Number of points in the grid
 int PointGrid::size() {
-	return _signals.size();
+	return _points.size();
 }
 
 string _stuple_str( SignalTuple t ) {
