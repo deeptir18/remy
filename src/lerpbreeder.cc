@@ -10,13 +10,20 @@ Evaluator< WhiskerTree >::Outcome LerpBreeder::improve( PointGrid & grid )
 	printf("Initial score to beat is %f\n", score_to_beat );
 	if ( (check_bootstrap( grid )) ) {
 		printf("Trying to optimize the 8 initial points\n");
-		for ( SignalActionMap::iterator it  = grid.begin(); it != grid.end(); ++it ) {
-			SignalTuple signal = it->first;
-      if ( signal == make_tuple( 0,0,0 ) ) {
+		// make a tuple with the signal value tuples to optimize
+		vector< SignalTuple > signals;
+		for ( double send_ewma = 0; send_ewma <= MAX_SEND_EWMA; send_ewma += MAX_SEND_EWMA ) {
+			for ( double rec_ewma = 0; rec_ewma <= MAX_REC_EWMA; rec_ewma += MAX_REC_EWMA ) {
+				for ( double rtt_ratio = 0; rtt_ratio <= MAX_RTT_RATIO; rtt_ratio += MAX_RTT_RATIO ) {
+					SignalTuple signal = make_tuple( send_ewma, rec_ewma, rtt_ratio );
+					signals.emplace_back( signal );
+				}
+			}
+		}
+		for ( SignalTuple signal: signals) {
 			ActionScore opt_action = optimize_point( signal, grid, eval, score_to_beat );
 			grid._points[signal] = opt_action.first; // replace action
 			score_to_beat = opt_action.second;
-      }
 	  }
 
 	} else {
