@@ -82,6 +82,75 @@ ProblemBuffers::Problem Evaluator< FinTree >::DNA( const FinTree & fins ) const
   return ret;
 }
 
+pair< double, vector < pair< double, double > > >
+single_simulation ( const NetConfig& config,
+                 PointGrid grid,
+                 PRNG seed,
+                 const unsigned int ticks)
+{
+  Network<SenderGang<LerpSender, TimeSwitchedSender<LerpSender>>,
+  SenderGang<LerpSender, TimeSwitchedSender<LerpSender>>> network1( LerpSender( grid ), seed, config );
+  network1.run_simulation( ticks );
+  double score = network1.senders().utility();
+  vector< pair< double, double > > throughput_delay = network1.senders().throughputs_delays();
+  pair < double, vector < pair < double, double > > > summary = make_pair(score, throughput_delay);
+  return summary;
+}
+
+template <>
+Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score_lerp_parallel(
+						PointGrid & grid,
+            const unsigned int prng_seed,
+            const vector<NetConfig> & configs,
+            const unsigned int ticks_to_run )
+{
+  PRNG run_prng( prng_seed );
+  Evaluator::Outcome the_outcome;
+	// vector for all threads to place their respective config scores
+  vector< pair < const NetConfig&, future< pair < double, vector < pair< double, double > > > > > > config_scores;
+  /* run simulation */
+  for ( auto &x : configs ) {
+		PointGrid test_grid( grid, false);
+		config_scores.emplace_back( x, async( launch::async, single_simulation, x, test_grid, run_prng, ticks_to_run ));
+  }
+  for ( auto &x: config_scores ) {
+    // later include stuff to modify the whisker to have all the modifications
+    NetConfig config = x.first;
+    pair< double, vector < pair < double, double > > > result = x.second.get();
+    double score = result.first;
+    the_outcome.score += score;
+    the_outcome.throughputs_delays.emplace_back( config, result.second );
+  }
+  return the_outcome;
+}
+
+template <>
+Evaluator< FinTree >::Outcome Evaluator< FinTree >::score_lerp_parallel(
+						PointGrid & grid,
+            const unsigned int prng_seed,
+            const vector<NetConfig> & configs,
+            const unsigned int ticks_to_run )
+{
+  PRNG run_prng( prng_seed );
+  Evaluator::Outcome the_outcome;
+	// vector for all threads to place their respective config scores
+  vector< pair < const NetConfig&, future< pair < double, vector < pair< double, double > > > > > > config_scores;
+  /* run simulation */
+  for ( auto &x : configs ) {
+		PointGrid test_grid( grid, false);
+		config_scores.emplace_back( x, async( launch::async, single_simulation, x, test_grid, run_prng, ticks_to_run ));
+  }
+  for ( auto &x: config_scores ) {
+    // later include stuff to modify the whisker to have all the modifications
+    NetConfig config = x.first;
+    pair< double, vector < pair < double, double > > > result = x.second.get();
+    double score = result.first;
+    the_outcome.score += score;
+    the_outcome.throughputs_delays.emplace_back( config, result.second );
+  }
+  return the_outcome;
+}
+
 template <>
 Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score_lerp(
 						PointGrid & grid,
@@ -300,6 +369,13 @@ typename Evaluator< T >::Outcome Evaluator< T >::score_lerp( PointGrid & grid, c
 {
   return score_lerp( grid, _prng_seed, _configs, _tick_count * carefulness );
 }
+
+template <typename T>
+typename Evaluator< T >::Outcome Evaluator< T >::score_lerp_parallel( PointGrid & grid, const double carefulness ) const
+{
+  return score_lerp( grid, _prng_seed, _configs, _tick_count * carefulness );
+}
+
 
 template class Evaluator< WhiskerTree>;
 template class Evaluator< FinTree >;
