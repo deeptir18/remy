@@ -91,13 +91,13 @@ LerpBreeder::get_replacements( Point point )
 			}
 		}
 	}
-	vector< ActionTuple > fake_ret;
+	/*vector< ActionTuple > fake_ret;
 	fake_ret.push_back( make_tuple( 60, .8, .22 ) );
 	fake_ret.push_back( make_tuple(17, .9, .004 ) );
 	fake_ret.push_back( make_tuple( 70, .8, .15 ) );
 	fake_ret.push_back( make_tuple( 50, .85, .35 ) );
-	return fake_ret;
-	//return ret;
+	return fake_ret;*/
+	return ret;
 }
 
 ActionScore
