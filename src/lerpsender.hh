@@ -16,9 +16,9 @@
 
 using namespace std;
 
-#define MAX_SEND_EWMA 1000
-#define MAX_REC_EWMA 1000
-#define MAX_RTT_RATIO 1000
+#define MAX_SEND_EWMA 300
+#define MAX_REC_EWMA 300
+#define MAX_RTT_RATIO 100
 
 #define NUM_SIGNALS 3 
 typedef tuple<double,double,double> SignalTuple;
@@ -110,7 +110,8 @@ private:
 
   /* Largest ACK so far */
   int _largest_ack;
-	
+
+	double interpolate_action( vector< double > actions, double x0_min_factor, double x1_min_factor, double x2_min_factor );
 
 public:
   LerpSender( PointGrid & grid );

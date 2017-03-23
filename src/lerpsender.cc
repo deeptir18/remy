@@ -213,16 +213,32 @@ void LerpSender::add_inner_point( const Point point, PointGrid & grid ) {
 			}
 		}
 	}
-
-	// TODO sort signals arrays
-	//
 }
 
+double LerpSender::interpolate_action( vector< double > actions, double x0_min_factor, double x1_min_factor, double x2_min_factor )
+{
+	double x0_max_factor = 1 - x0_min_factor;
+	double x1_max_factor = 1 - x1_min_factor;
+	double x2_max_factor = 1 - x2_min_factor;
+
+	double c00 = ( actions[0] )*x0_min_factor + ( actions[4] )*x0_max_factor;
+	double c01 = ( actions[1] )*x0_min_factor + ( actions[5] )*x0_max_factor;
+	double c10 = ( actions[2] )*x0_min_factor + ( actions[6] )*x0_max_factor;
+	double c11 = ( actions[3] )*x0_min_factor + ( actions[7] )*x0_max_factor;
+
+	double c0 = c00*x1_min_factor + c10*x1_max_factor;
+	double c1 = c01*x1_min_factor + c11*x1_max_factor;
+
+	double c = c0*( x2_min_factor ) + c1*( x2_max_factor );
+	return c;
+
+}
 ActionTuple LerpSender::interpolate( SignalTuple t ) {
 	return interpolate(SEND_EWMA(t),REC_EWMA(t),RTT_RATIO(t));
 }
 
 ActionTuple LerpSender::interpolate( double obs_send_ewma, double obs_rec_ewma, double obs_rtt_ratio ) {
+
 	double x0min, x0max, x1min, x1max, x2min, x2max;
 
   int i = 0;
@@ -240,12 +256,12 @@ ActionTuple LerpSender::interpolate( double obs_send_ewma, double obs_rec_ewma, 
   x2min = _grid._signals[2][ max( i, 0 ) ];
   x2max = _grid._signals[2][ min( i+1, int(_grid._signals[2].size() - 1) ) ];
 
-  double x0_max_t = (x0max - obs_send_ewma),
-         x0_t_min = (obs_send_ewma - x0min),
-         x1_max_t = (x1max - obs_rec_ewma),
-         x1_t_min = (obs_rec_ewma - x1min),
-         x2_max_t = (x2max - obs_rtt_ratio),
-         x2_t_min = (obs_rtt_ratio - x2min);
+	double x0d = ( obs_send_ewma - x0min )/( x0max - obs_send_ewma );
+	double x1d = ( obs_rec_ewma - x1min )/ ( x1max - obs_rec_ewma );
+	double x2d = ( obs_rtt_ratio - x2min )/ (x2max - obs_rtt_ratio);
+	double x0_min_factor = ( obs_send_ewma == x0min ) ? 1 : ( obs_send_ewma == x0max ) ? 0 : ( 1 - x0d );
+	double x1_min_factor = ( obs_rec_ewma == x1min ) ? 1 : ( obs_rec_ewma == x1max ) ?  0 : ( 1 - x1d );
+	double x2_min_factor = ( obs_rtt_ratio == x2min ) ? 1 : ( obs_rtt_ratio == x2max ) ?  0 : ( 1 - x2d );
 
   vector<ActionTuple> actions = {
 		_grid._points[make_tuple(x0min, x1min, x2min)],
@@ -257,47 +273,21 @@ ActionTuple LerpSender::interpolate( double obs_send_ewma, double obs_rec_ewma, 
 		_grid._points[make_tuple(x0max, x1max, x2min)],
 		_grid._points[make_tuple(x0max, x1max, x2max)],
 	};
+	vector< double > increments;
+	vector< double > multiples;
+	vector< double > intersends;
 
-  double window_increment =
-        ((((x0_max_t * ((x1_max_t * x2_max_t * CWND_INC(actions[0])) + 
-                       (x1_max_t * x2_t_min * CWND_INC(actions[1])) +
-                       (x1_t_min * x2_max_t * CWND_INC(actions[2])) + 
-                       (x1_t_min * x2_t_min * CWND_INC(actions[3])))) +
-           (x0_t_min * (x1_max_t * x2_max_t * CWND_INC(actions[4])) + 
-                       (x1_max_t * x2_t_min * CWND_INC(actions[5])) +
-                       (x1_t_min * x2_max_t * CWND_INC(actions[6])) + 
-                       (x1_t_min * x2_t_min * CWND_INC(actions[7])))))
-           / 
-           ((x0max - x0min) * (x1max - x1min) * (x2max - x2min))
-         );
+	for ( int i = 0; i < 8; i ++ ) {
+		increments.emplace_back( CWND_INC( actions[i] ) );
+		multiples.emplace_back( CWND_MULT( actions[i]  ));
+		intersends.emplace_back( MIN_SEND( actions[i] ));
+	}
 
-  double window_multiplier = 
-        ((((x0_max_t * ((x1_max_t * x2_max_t * CWND_MULT(actions[0])) + 
-                       (x1_max_t * x2_t_min * CWND_MULT(actions[1])) +
-                       (x1_t_min * x2_max_t * CWND_MULT(actions[2])) + 
-                       (x1_t_min * x2_t_min * CWND_MULT(actions[3])))) +
-           (x0_t_min * (x1_max_t * x2_max_t * CWND_MULT(actions[4])) + 
-                       (x1_max_t * x2_t_min * CWND_MULT(actions[5])) +
-                       (x1_t_min * x2_max_t * CWND_MULT(actions[6])) + 
-                       (x1_t_min * x2_t_min * CWND_MULT(actions[7])))))
-           / 
-           ((x0max - x0min) * (x1max - x1min) * (x2max - x2min))
-         );
+	double inc = interpolate_action( increments, x0_min_factor, x1_min_factor, x2_min_factor );
+	double mult = interpolate_action( multiples, x0_min_factor, x1_min_factor, x2_min_factor );
+	double send = interpolate_action( intersends, x0_min_factor, x1_min_factor, x2_min_factor );
+	return make_tuple( inc, mult, send);
 
-  double intersend = 
-        ((((x0_max_t * ((x1_max_t * x2_max_t * MIN_SEND(actions[0])) + 
-                       (x1_max_t * x2_t_min * MIN_SEND(actions[1])) +
-                       (x1_t_min * x2_max_t * MIN_SEND(actions[2])) + 
-                       (x1_t_min * x2_t_min * MIN_SEND(actions[3])))) +
-           (x0_t_min * (x1_max_t * x2_max_t * MIN_SEND(actions[4])) + 
-                       (x1_max_t * x2_t_min * MIN_SEND(actions[5])) +
-                       (x1_t_min * x2_max_t * MIN_SEND(actions[6])) + 
-                       (x1_t_min * x2_t_min * MIN_SEND(actions[7])))))
-           / 
-           ((x0max - x0min) * (x1max - x1min) * (x2max - x2min))
-         );
-
-	return make_tuple(window_increment, window_multiplier, intersend);
 }
 
 /*****************************************************************************/
