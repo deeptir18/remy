@@ -38,6 +38,15 @@ typedef pair<SignalTuple,ActionTuple> Point;
 string _stuple_str( SignalTuple t );
 string _atuple_str( ActionTuple t );
 string _point_str( Point p );
+struct HashAction{
+	size_t operator()(const ActionTuple& a) const{
+		return (
+			hash<double>()(get<0>(a)) ^ 
+			hash<double>()(get<1>(a)) ^
+			hash<double>()(get<2>(a))
+		);
+	}
+};
 
 struct HashSignal{
 	size_t operator()(const SignalTuple& s) const{

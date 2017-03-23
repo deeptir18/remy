@@ -91,8 +91,8 @@ LerpBreeder::get_replacements( Point point )
 			}
 		}
 	}
-	/*vector< ActionTuple > fake_ret;
-	fake_ret.push_back( make_tuple( 60, .8, .22 ) );
+	vector< ActionTuple > fake_ret;
+	/*fake_ret.push_back( make_tuple( 60, .8, .22 ) );
 	fake_ret.push_back( make_tuple(17, .9, .004 ) );
 	fake_ret.push_back( make_tuple( 70, .8, .15 ) );
 	fake_ret.push_back( make_tuple( 50, .85, .35 ) );
@@ -100,27 +100,46 @@ LerpBreeder::get_replacements( Point point )
 	return ret;
 }
 
+
+
 ActionScore
 LerpBreeder::optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< WhiskerTree > eval, double current_score )
 {
+	unordered_map< ActionTuple, double, HashAction > eval_cache {};
+	double score = current_score;
 	ActionTuple original_action = grid._points[signal];
 	ActionTuple best_action = original_action;
-	Point point = make_pair( signal, original_action );
+	while ( true ) {
+	Point point = make_pair( signal, best_action );
 	vector< ActionTuple > replacements = get_replacements( point );
 	for ( ActionTuple & a: replacements ) {
-		PointGrid test_grid( grid, false );
-		test_grid._points[signal] = a;
-		printf("REPLACED test grid to have %s->%s\n", _stuple_str( signal ).c_str(), _atuple_str( test_grid._points[signal] ).c_str() );
-		double score = ( eval.score_lerp_parallel( test_grid, _carefulness ) ).score;
-		printf("Evaluated signal->action: %s -> %s; score: %f\n", _stuple_str( signal).c_str(), _atuple_str( test_grid._points[signal] ).c_str(), score);
-		printf("\n");
-		if ( score > current_score ) {
-			current_score = score;
-			best_action = a;
+		if ( eval_cache.find( a ) == eval_cache.end() ) {
+			printf("Trying action %s\n", _atuple_str( a ).c_str() );
+			PointGrid test_grid( grid, false );
+			test_grid._points[signal] = a;
+			printf("REPLACED test grid to have %s->%s\n", _stuple_str( signal ).c_str(), _atuple_str( test_grid._points[signal] ).c_str() );
+			// test to see if it's in the eval cache
+			double new_score = ( eval.score_lerp_parallel( test_grid, _carefulness ) ).score;
+			printf("Evaluated signal->action: %s -> %s; score: %f\n", _stuple_str( signal).c_str(), _atuple_str( test_grid._points[signal] ).c_str(), score);
+			printf("\n");
+			if ( new_score > score ) {
+				score = new_score;
+				best_action = a;
+			}
+			eval_cache.insert( make_pair( a, score ) );
+		} else {
+			double new_score = eval_cache.at( a );
+			if ( new_score >score ) {
+				score = new_score;
+				best_action = a;
+			}
 		}
 	}
-
-	return make_pair( best_action, current_score );
+	if ( score == current_score ) {
+		break;
+	}
+  }
+	return make_pair( best_action, score );
 }
 
 double

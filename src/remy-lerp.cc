@@ -55,7 +55,6 @@ int main( int argc, char *argv[] )
   ConfigRange config_range = ConfigRange( input_config );
 	LerpBreeder breeder( config_range );
 
-	printf("The point grid is %s\n", grid.str().c_str() );
 
   unsigned int run = 0;
 
@@ -76,6 +75,8 @@ int main( int argc, char *argv[] )
 	printf("RUN IS CURRENTLY %d\n", run);
   printf( "#######################\n" );
 	while ( 1 ) {
+		printf("The point grid is: \n%s\n", grid.str().c_str() );
+
 		auto outcome = breeder.improve( grid );
     printf( "run = %u, score = %f\n", run, outcome.score );
 		printf( "Current point grid:\n %s\n", grid.str().c_str() );

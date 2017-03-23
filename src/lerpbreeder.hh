@@ -8,6 +8,7 @@ using namespace std;
 #include "evaluator.hh"
 #include "whiskertree.hh"
 #include <future>
+#include <unordered_map>
 typedef pair< ActionTuple, double > ActionScore;
 /*########################################################################*/
 struct OptimizationSetting
