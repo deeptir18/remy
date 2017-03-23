@@ -38,9 +38,8 @@ Evaluator< WhiskerTree >::Outcome LerpBreeder::improve( PointGrid & grid )
 }
 
 double
-LerpBreeder::optimize_new_median( SignalTuple median, PointGrid & original_grid, double current_score )
+LerpBreeder::optimize_new_median( SignalTuple median, PointGrid & grid, double current_score )
 {
-	PointGrid grid( original_grid, false );
 	LerpSender sender = LerpSender( grid );
 	ActionTuple interpolated_action = sender.interpolate( median );
 	Point median_pt = make_pair( median, interpolated_action );

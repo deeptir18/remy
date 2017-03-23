@@ -75,7 +75,7 @@ class LerpBreeder
 		bool check_bootstrap( PointGrid & grid );
 		ActionScore optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< WhiskerTree > eval, double current_score );
 		ActionScore optimize_point_parallel( SignalTuple signal, PointGrid & grid, double current_score );
-		double optimize_new_median( SignalTuple median, PointGrid & original_grid, double current_score );
+		double optimize_new_median( SignalTuple median, PointGrid & grid, double current_score );
 		//double single_simulation( PointGrid & grid );
 	public:
 		LerpBreeder( ConfigRange range ): _config_range( range ), _carefulness( 1 ) {}
