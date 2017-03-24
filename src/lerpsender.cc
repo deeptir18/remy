@@ -4,6 +4,7 @@
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/accumulators/statistics/median.hpp>
+#include <stdlib.h>
 
 #include "lerpsender.hh"
 using namespace std;
@@ -177,19 +178,20 @@ void LerpSender::add_inner_point( const Point point, PointGrid & grid ) {
 	tie (obs_send_ewma, obs_rec_ewma, obs_rtt_ratio) = point.first;
 
   int i = 0;
-  while ( obs_send_ewma < _grid._signals[0][i] ) { i ++; }
-  x0min = _grid._signals[0][ max( i, 0 ) ];
-  x0max = _grid._signals[0][ min( i+1, int(_grid._signals[0].size() -  1) ) ];
+  while ( obs_send_ewma > _grid._signals[0][i] ) { i ++; }
+  x0min = _grid._signals[0][ max( i-1, 0 ) ];
+  x0max = _grid._signals[0][ min( i, int(_grid._signals[0].size() -  1) ) ];
 
   i = 0;
-  while ( obs_rec_ewma < _grid._signals[1][i] ) { i ++; }
-  x1min = _grid._signals[1][ max( i, 0 ) ];
-  x1max = _grid._signals[1][ min( i+1, int(_grid._signals[1].size() - 1) ) ];
+  while ( obs_rec_ewma > _grid._signals[1][i] ) { i ++; }
+  x1min = _grid._signals[1][ max( i-1, 0 ) ];
+  x1max = _grid._signals[1][ min( i, int(_grid._signals[1].size() - 1) ) ];
 
   i = 0;
-  while ( obs_rtt_ratio < _grid._signals[2][i] ) { i ++; }
-  x2min = _grid._signals[2][ max( i, 0 ) ];
-  x2max = _grid._signals[2][ min( i+1, int(_grid._signals[2].size() - 1) ) ];
+  while ( obs_rtt_ratio > _grid._signals[2][i] ) { i ++; }
+  x2min = _grid._signals[2][ max( i-1, 0 ) ];
+  x2max = _grid._signals[2][ min( i, int(_grid._signals[2].size() - 1) ) ];
+
 
 	// Add all side points
 	for (double &x : vector<double>{x0min,SEND_EWMA(point.first),x0max}) {
@@ -212,6 +214,9 @@ void LerpSender::add_inner_point( const Point point, PointGrid & grid ) {
 				}
 			}
 		}
+	}
+	for (int i=0; i<3; i++) {
+		sort(grid._signals[i].begin(), grid._signals[i].end());
 	}
 }
 
@@ -242,19 +247,26 @@ ActionTuple LerpSender::interpolate( double obs_send_ewma, double obs_rec_ewma, 
 	double x0min, x0max, x1min, x1max, x2min, x2max;
 
   int i = 0;
-  while ( obs_send_ewma < _grid._signals[0][i] ) { i ++; }
-  x0min = _grid._signals[0][ max( i, 0 ) ];
-  x0max = _grid._signals[0][ min( i+1, int(_grid._signals[0].size() -  1) ) ];
+  while ( obs_send_ewma > _grid._signals[0][i] ) { i ++; }
+  x0min = _grid._signals[0][ max( i-1, 0 ) ];
+  x0max = _grid._signals[0][ min( i, int(_grid._signals[0].size() -  1) ) ];
 
   i = 0;
-  while ( obs_rec_ewma < _grid._signals[1][i] ) { i ++; }
-  x1min = _grid._signals[1][ max( i, 0 ) ];
-  x1max = _grid._signals[1][ min( i+1, int(_grid._signals[1].size() - 1) ) ];
+  while ( obs_rec_ewma > _grid._signals[1][i] ) { i ++; }
+  x1min = _grid._signals[1][ max( i-1, 0 ) ];
+  x1max = _grid._signals[1][ min( i, int(_grid._signals[1].size() - 1) ) ];
 
   i = 0;
-  while ( obs_rtt_ratio < _grid._signals[2][i] ) { i ++; }
-  x2min = _grid._signals[2][ max( i, 0 ) ];
-  x2max = _grid._signals[2][ min( i+1, int(_grid._signals[2].size() - 1) ) ];
+  while ( obs_rtt_ratio > _grid._signals[2][i] ) { i ++; }
+  x2min = _grid._signals[2][ max( i-1, 0 ) ];
+  x2max = _grid._signals[2][ min( i, int(_grid._signals[2].size() - 1) ) ];
+
+	/*
+	if (rand() % 1000000 == 5) {
+		printf("signal: %f %f %f || ", obs_send_ewma, obs_rec_ewma, obs_rtt_ratio );
+		printf("x0: %f,%f x1: %f,%f x2: %f,%f\n", x0min,x0max, x1min,x1max, x2min,x2max );
+	}
+	*/
 
 	double x0d = ( obs_send_ewma - x0min )/( x0max - obs_send_ewma );
 	double x1d = ( obs_rec_ewma - x1min )/ ( x1max - obs_rec_ewma );
