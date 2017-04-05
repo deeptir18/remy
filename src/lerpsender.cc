@@ -5,6 +5,7 @@
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/accumulators/statistics/median.hpp>
 #include <stdlib.h>
+#include "linterp.h"
 
 #include "lerpsender.hh"
 using namespace std;

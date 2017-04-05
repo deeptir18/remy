@@ -1,5 +1,6 @@
 AM_CPPFLAGS = $(CXX11_FLAGS) -I../protobufs
-AM_CXXFLAGS = $(PICKY_CXXFLAGS)
+# AM_CXXFLAGS = $(PICKY_CXXFLAGS)
+AM_CXXFLAGS = -Wall -Wpedantic -Wextra
 LDADD = ../protobufs/libremyprotos.a -lm $(protobuf_LIBS)
 
 bin_PROGRAMS = remy remy-poisson remy-lerp sender-runner sender-logger scoring-example configuration inspect-config inspect-simulationsdata lerptester
@@ -15,7 +16,7 @@ common_source = delay.hh evaluator.cc evaluator.hh                 \
 	utility.hh whisker.cc whisker.hh whiskertree.cc whiskertree.hh \
 	poly.hh                                                 \
 	aimd-templates.cc aimd.cc aimd.hh polysender-templates.cc polysender.cc polysender.hh                              \
-	lerpsender-templates.cc lerpsender.cc lerpsender.hh \
+	lerpsender-templates.cc lerpsender.cc lerpsender.hh linterp.h \
 	configrange.hh configrange.cc                              \
 	simulationresults.hh simulationresults.cc                      \
     action.hh fin.hh fin.cc fintree.cc fintree.hh  	               \
