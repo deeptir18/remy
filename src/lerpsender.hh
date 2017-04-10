@@ -36,6 +36,7 @@ typedef pair<SignalTuple,ActionTuple> Point;
 #define DEFAULT_MULT 1
 #define DEFAULT_SEND 3
 struct InterpInfo {
+  InterpInfo() :  window_incr_vals( 8 ), window_mult_vals( 8 ), intersend_vals( 8) {}
 	double min_send_ewma;
 	double max_send_ewma;
 	double min_rec_ewma;
@@ -43,7 +44,6 @@ struct InterpInfo {
 	double min_rtt_ratio;
 	double max_rtt_ratio;
 	array<int, 3> grid_sizes;
-	std::vector< std::vector< double >::iterator > grid_iter_list; // the x coordinates
 	std::vector< double > window_incr_vals;
 	std::vector< double > window_mult_vals;
 	std::vector< double > intersend_vals;
@@ -136,6 +136,7 @@ private:
   int _largest_ack;
 	string interp_str();
 	double interpolate_action( vector< double > actions, double x0_min_factor, double x1_min_factor, double x2_min_factor );
+  void print_interp_info( InterpInfo info );
 
 public:
   LerpSender( PointGrid & grid );
