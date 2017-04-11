@@ -121,7 +121,6 @@ SignalTuple Evaluator< WhiskerTree >::grid_get_median_signal(
   vector< pair < const NetConfig&, future< SignalTuple > > > median_signals;
   for ( auto &x : configs ) {
 		PointGrid test_grid( grid, true); // copies the test grid
-    test_grid._debug = true;
     median_signals.emplace_back( x,  async( launch::async, get_median, x, test_grid, run_prng, ticks_to_run ) );
   }
   // now take the avg of the median signal tuples

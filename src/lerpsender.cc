@@ -165,6 +165,9 @@ void LerpSender::update_actions( const Memory memory )
   double obs_send_ewma = (double)(memory.field( 0 ) );
   double obs_rec_ewma = (double)(memory.field( 1 ) );
   double obs_rtt_ratio = (double)(memory.field( 2 ) );
+  if ( _grid._debug ) {
+    printf("Obs values: [%f, %f, %f]\n", obs_send_ewma, obs_rec_ewma, obs_rtt_ratio );
+  }
 	_grid.track( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio );
 
 	ActionTuple a = interpolate( make_tuple( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio ) );
