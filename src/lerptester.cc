@@ -53,13 +53,15 @@ int main( int argc, char *argv[] )
 	SignalTuple signal = make_tuple( send_ewma, rec_ewma, rtt_ratio );
 	ActionTuple a = sender.interpolate( signal );
 	printf("Maps %s -> %s\n", _stuple_str( signal ).c_str(), _atuple_str( a ).c_str() );
-  SignalTuple ns = make_tuple( 30, 20, 25 );
-  ActionTuple na = make_tuple( 100, .9, .14 );
-  sender.add_inner_point( make_pair( ns, na ), grid );
+
+
+  //SignalTuple ns = make_tuple( 30, 20, 25 );
+  //ActionTuple na = make_tuple( 100, .9, .14 );
+  //sender.add_inner_point( make_pair( ns, na ), grid );
 	//printf("Grid is %s\n", grid.str().c_str() );
 
-  signal = make_tuple( send_ewma, rec_ewma, rtt_ratio );
-	a = sender.interpolate( signal );
+  //signal = make_tuple( send_ewma, rec_ewma, rtt_ratio );
+	//a = sender.interpolate( signal );
 	printf("Now Maps %s -> %s\n", _stuple_str( signal ).c_str(), _atuple_str( a ).c_str() );
 
 }

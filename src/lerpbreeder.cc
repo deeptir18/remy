@@ -30,8 +30,8 @@ Evaluator< WhiskerTree >::Outcome LerpBreeder::improve( PointGrid & grid )
 
 	} else {
 		PointGrid test_grid( grid, true );
-	  eval.score_lerp( test_grid, _carefulness );
-		SignalTuple median = test_grid.get_median_signal();
+    printf("Looking for a new median\n");
+    SignalTuple median = eval.grid_get_median_signal( test_grid, _carefulness);
 		printf("New median is %s\n", _stuple_str(median).c_str());
 		double new_score = optimize_new_median( median, grid, score_to_beat );
 		printf("New score after adding the new median is %f\n", new_score );
@@ -96,9 +96,9 @@ LerpBreeder::get_replacements( Point point )
 	}
 	vector< ActionTuple > fake_ret;
 	fake_ret.push_back( make_tuple( 60, .8, .22 ) );
-	//fake_ret.push_back( make_tuple(17, .9, .004 ) );
-	//fake_ret.push_back( make_tuple( 70, .8, .15 ) );
-	//fake_ret.push_back( make_tuple( 50, .85, .35 ) );
+	fake_ret.push_back( make_tuple(17, .9, .004 ) );
+	fake_ret.push_back( make_tuple( 70, .8, .15 ) );
+	fake_ret.push_back( make_tuple( 50, .85, .35 ) );
 	return fake_ret;
 	//return ret;
 }

@@ -81,6 +81,18 @@ ProblemBuffers::Problem Evaluator< FinTree >::DNA( const FinTree & fins ) const
 
   return ret;
 }
+SignalTuple
+get_median ( const NetConfig& config,
+                 PointGrid grid,
+                 PRNG seed,
+                 const unsigned int ticks)
+{
+  Network<SenderGang<LerpSender, TimeSwitchedSender<LerpSender>>,
+  SenderGang<LerpSender, TimeSwitchedSender<LerpSender>>> network1( LerpSender( grid ), seed, config );
+  network1.run_simulation( ticks );
+  SignalTuple median = grid.get_median_signal();
+  return median;
+}
 
 pair< double, vector < pair< double, double > > >
 single_simulation ( const NetConfig& config,
@@ -95,6 +107,66 @@ single_simulation ( const NetConfig& config,
   vector< pair< double, double > > throughput_delay = network1.senders().throughputs_delays();
   pair < double, vector < pair < double, double > > > summary = make_pair(score, throughput_delay);
   return summary;
+}
+template <>
+SignalTuple Evaluator< WhiskerTree >::grid_get_median_signal(
+						PointGrid & grid,
+            const unsigned int prng_seed,
+            const vector<NetConfig> & configs,
+            const unsigned int ticks_to_run )
+{
+  PRNG run_prng( prng_seed );
+  Evaluator::Outcome the_outcome;
+	// vector for all threads to place their respective median signals
+  vector< pair < const NetConfig&, future< SignalTuple > > > median_signals;
+  for ( auto &x : configs ) {
+		PointGrid test_grid( grid, true); // copies the test grid
+    test_grid._debug = true;
+    median_signals.emplace_back( x,  async( launch::async, get_median, x, test_grid, run_prng, ticks_to_run ) );
+  }
+  // now take the avg of the median signal tuples
+  double total_send = 0;
+  double total_rec = 0;
+  double total_ratio = 0;
+  int count = 0;
+  for ( auto & x: median_signals ) {
+    SignalTuple s = x.second.get();
+    total_send += CWND_INC( s );
+    total_rec += CWND_MULT( s );
+    total_ratio += MIN_SEND( s );
+    count += 1;
+  }
+  total_send = total_send/double( count );
+  total_rec = total_rec/double(count);
+  total_ratio = total_ratio/double(count);
+  return make_tuple(total_send, total_rec, total_ratio);
+}
+
+template <>
+SignalTuple Evaluator< FinTree >::grid_get_median_signal(
+						PointGrid & grid,
+            const unsigned int prng_seed,
+            const vector<NetConfig> & configs,
+            const unsigned int ticks_to_run )
+{
+  PRNG run_prng( prng_seed );
+  Evaluator::Outcome the_outcome;
+	// vector for all threads to place their respective config scores
+  vector< pair < const NetConfig&, future< pair < double, vector < pair< double, double > > > > > > config_scores;
+  /* run simulation */
+  for ( auto &x : configs ) {
+		PointGrid test_grid( grid, false);
+		config_scores.emplace_back( x, async( launch::async, single_simulation, x, test_grid, run_prng, ticks_to_run ));
+  }
+  for ( auto &x: config_scores ) {
+    // later include stuff to modify the whisker to have all the modifications
+    NetConfig config = x.first;
+    pair< double, vector < pair < double, double > > > result = x.second.get();
+    double score = result.first;
+    the_outcome.score += score;
+    the_outcome.throughputs_delays.emplace_back( config, result.second );
+  }
+  return make_tuple(1,1,3);
 }
 
 template <>
@@ -378,6 +450,11 @@ typename Evaluator< T >::Outcome Evaluator< T >::score_lerp_parallel( PointGrid 
   return score_lerp_parallel( grid, _prng_seed, _configs, _tick_count * carefulness );
 }
 
+template <typename T>
+SignalTuple Evaluator< T >::grid_get_median_signal( PointGrid & grid, const double carefulness ) const
+{
+  return grid_get_median_signal( grid, _prng_seed, _configs, _tick_count * carefulness );
+}
 
 template class Evaluator< WhiskerTree>;
 template class Evaluator< FinTree >;

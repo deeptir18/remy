@@ -19,6 +19,7 @@ static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 	PointGrid::PointGrid( bool track )
 	:	 _track ( track ),
 		 _acc ( NUM_SIGNALS ), // if true, accumulates all signals here
+     _debug( false ),
 	   _points( ),
      _signals( NUM_SIGNALS )
 {
@@ -39,7 +40,8 @@ static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 // Copy constructor
 PointGrid::PointGrid( PointGrid & other, bool track )
 	:	_track( track ),
-		_acc( other._acc ),
+		_acc( NUM_SIGNALS ), // NOTE: here, there is a fresh accumulator every new point grid - as we don't need the acc for most instances.
+    _debug( false ),
 	  _points( other._points ),
 	  _signals( other._signals )
 {}
@@ -99,7 +101,7 @@ void PointGrid::track ( double s, double r, double t ) {
 
 SignalTuple PointGrid::get_median_signal() {
 	assert(_track);
-	return make_tuple( 
+	return make_tuple(
 			boost::accumulators::median( _acc[0] ), 
 			boost::accumulators::median( _acc[1] ),
 			boost::accumulators::median( _acc[2] )

@@ -102,6 +102,7 @@ private:
 									boost::accumulators::tag::median > > > _acc;
 public:
 	// can access these two directly for now
+  bool _debug;
 	SignalActionMap _points; // map of signal to action
   vector< vector< double > > _signals; // list of values for each signal
 	PointGrid( bool track = false );
