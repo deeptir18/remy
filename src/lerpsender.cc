@@ -1,11 +1,14 @@
 #include <limits>
 #include <iomanip>
 #include <algorithm>
+#include <boost/array.hpp>
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
-#include <boost/accumulators/statistics/median.hpp>
+#include <boost/accumulators/statistics/median.hpp> 
 #include <stdlib.h>
 #include "linterp.h"
+#include "p2.h"
+#include <stdio.h>
 
 #include "lerpsender.hh"
 using namespace std;
@@ -16,9 +19,11 @@ static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 #define DEFAULT_INCR 1
 #define DEFAULT_MULT 1
 #define DEFAULT_SEND 3
+#define UPPER_QUANTILE 0.95
 	PointGrid::PointGrid( bool track )
 	:	 _track ( track ),
-		 _acc ( NUM_SIGNALS ), // if true, accumulates all signals here
+		 _acc ( NUM_SIGNALS, p2_t( UPPER_QUANTILE ) )
+		 _acc ( NUM_SIGNALS ),
      _debug( false ),
 	   _points( ),
      _signals( NUM_SIGNALS )
@@ -37,10 +42,28 @@ static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 	_signals[2] = { 0, MAX_RTT_RATIO };
 }
 
+/*
+void PointGrid::Test( ) {
+		boost::array<double,5> probs = {0.001,0.01,0.1,.99,0.999};
+		acc_quantile_t accc( acc_prob_param = probs);
+
+		for (double i=0.0; i<10000.; ++i) {
+			accc(i);
+		}
+
+		for (std::size_t i=0; i < probs.size(); ++i)
+		{
+			    printf("%f: %f\n", probs[i],boost::accumulators::extended_p_square(accc)[i]);
+		}
+		return;
+}
+*/
+
 // Copy constructor
 PointGrid::PointGrid( PointGrid & other, bool track )
 	:	_track( track ),
-		_acc( NUM_SIGNALS ), // NOTE: here, there is a fresh accumulator every new point grid - as we don't need the acc for most instances.
+		_acc( NUM_SIGNALS, p2_t( UPPER_QUANTILE ) ),
+		// _acc( NUM_SIGNALS ),
     _debug( false ),
 	  _points( other._points ),
 	  _signals( other._signals )
@@ -92,19 +115,30 @@ string PointGrid::str() {
 }
 
 void PointGrid::track ( double s, double r, double t ) {
+	// printf("%f %f %f\n", s, r ,t);
 	if (_track) {
+		/*
 		_acc[0]( s );
 		_acc[1]( r );
 		_acc[2]( t );
+		*/
+		_acc[0].add( s );
+		_acc[1].add( s );
+		_acc[2].add( s );
 	}
 }
 
 SignalTuple PointGrid::get_median_signal() {
 	assert(_track);
 	return make_tuple(
-			boost::accumulators::median( _acc[0] ), 
+			/*
+			boost::accumulators::median( _acc[0] ),
 			boost::accumulators::median( _acc[1] ),
 			boost::accumulators::median( _acc[2] )
+			*/
+			_acc[0].result( ),
+			_acc[1].result( ),
+			_acc[2].result( )
 	);
 }
 /*****************************************************************************/

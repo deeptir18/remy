@@ -10,11 +10,13 @@
 
 #include <unordered_map>
 
+#include <boost/array.hpp>
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
-#include <boost/accumulators/statistics/median.hpp>
+#include <boost/accumulators/statistics/median.hpp> 
 
-#include "boost/multi_array.hpp"
+#include "p2.h"
+
 using namespace std;
 
 #define MAX_SEND_EWMA 300
@@ -92,14 +94,17 @@ struct CompareSignals {
 	}
 };
 
+typedef boost::accumulators::accumulator_set < double,
+				boost::accumulators::stats<
+				boost::accumulators::tag::median > > acc_median_t;
+
 class PointGrid 
 {
 
 private:
 	bool _track;
-	mutable vector< boost::accumulators::accumulator_set < double,
-									boost::accumulators::stats<
-									boost::accumulators::tag::median > > > _acc;
+	mutable vector< p2_t > _acc;
+	// mutable vector< acc_median_t > _acc;
 public:
 	// can access these two directly for now
   bool _debug;
@@ -110,15 +115,14 @@ public:
 
 	SignalActionMap::iterator begin();
 	SignalActionMap::iterator end();
-	int size(); 
+  int size();
 
-	string str();
+  string str();
 
-	void track( double s, double r, double t );
-	SignalTuple get_median_signal (); 
+  void track( double s, double r, double t );
+  SignalTuple get_median_signal ();
 
 };
-
 
 class LerpSender
 {
