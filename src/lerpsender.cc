@@ -22,8 +22,7 @@ static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 #define UPPER_QUANTILE 0.95
 	PointGrid::PointGrid( bool track )
 	:	 _track ( track ),
-		 _acc ( NUM_SIGNALS, p2_t( UPPER_QUANTILE ) )
-		 _acc ( NUM_SIGNALS ),
+		 _acc ( NUM_SIGNALS, p2_t( UPPER_QUANTILE ) ),
      _debug( false ),
 	   _points( ),
      _signals( NUM_SIGNALS )
@@ -123,8 +122,8 @@ void PointGrid::track ( double s, double r, double t ) {
 		_acc[2]( t );
 		*/
 		_acc[0].add( s );
-		_acc[1].add( s );
-		_acc[2].add( s );
+		_acc[1].add( r );
+		_acc[2].add( t );
 	}
 }
 

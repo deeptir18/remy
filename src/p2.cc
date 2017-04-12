@@ -14,10 +14,24 @@ p2_t::p2_t( )
 
 p2_t::~p2_t( )
 {
+	/*
+	if (q != NULL) {
     delete [] q;
+	}
+	q = NULL;
+	if (dn != NULL) {
     delete [] dn;
+	}
+	dn = NULL;
+	if (np != NULL) {
     delete [] np;
+	}
+	np = NULL;
+	if (n != NULL) {
     delete [] n;
+	} 
+	n = NULL;
+	*/
 }
 
 p2_t::p2_t( double quant )
