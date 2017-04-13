@@ -103,8 +103,9 @@ class PointGrid
 
 private:
 	bool _track;
-	mutable vector< p2_t > _acc;
+	// mutable vector< p2_t > _acc;
 	// mutable vector< acc_median_t > _acc;
+	p2_t _send_acc, _rec_acc, _rtt_acc;
 public:
 	// can access these two directly for now
   bool _debug;

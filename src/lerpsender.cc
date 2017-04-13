@@ -22,7 +22,10 @@ static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 #define UPPER_QUANTILE 0.95
 	PointGrid::PointGrid( bool track )
 	:	 _track ( track ),
-		 _acc ( NUM_SIGNALS, p2_t( UPPER_QUANTILE ) ),
+		 // _acc ( NUM_SIGNALS, p2_t( UPPER_QUANTILE ) ),
+		 _send_acc( UPPER_QUANTILE ),
+		 _rec_acc( UPPER_QUANTILE ),
+		 _rtt_acc( UPPER_QUANTILE ),
      _debug( false ),
 	   _points( ),
      _signals( NUM_SIGNALS )
@@ -61,7 +64,10 @@ void PointGrid::Test( ) {
 // Copy constructor
 PointGrid::PointGrid( PointGrid & other, bool track )
 	:	_track( track ),
-		_acc( NUM_SIGNALS, p2_t( UPPER_QUANTILE ) ),
+		 _send_acc( UPPER_QUANTILE ),
+		 _rec_acc( UPPER_QUANTILE ),
+		 _rtt_acc( UPPER_QUANTILE ),
+		// _acc( NUM_SIGNALS, p2_t( UPPER_QUANTILE ) ),
 		// _acc( NUM_SIGNALS ),
     _debug( false ),
 	  _points( other._points ),
@@ -115,15 +121,21 @@ string PointGrid::str() {
 
 void PointGrid::track ( double s, double r, double t ) {
 	// printf("%f %f %f\n", s, r ,t);
+	// printf("%p %p %p\n", &(_acc[0]), &(_acc[1]), &(_acc[2]));
+	// printf("%f %f %f\n", _acc[0].result(), _acc[1].result(), _acc[2].result());
+	// printf("%f %f %f\n", _send_acc.result(), _rec_acc.result(), _rtt_acc.result());
 	if (_track) {
 		/*
 		_acc[0]( s );
 		_acc[1]( r );
 		_acc[2]( t );
-		*/
 		_acc[0].add( s );
 		_acc[1].add( r );
 		_acc[2].add( t );
+		*/
+		_send_acc.add( s );
+		_rec_acc.add( r );
+		_rtt_acc.add( t );
 	}
 }
 
@@ -134,10 +146,13 @@ SignalTuple PointGrid::get_median_signal() {
 			boost::accumulators::median( _acc[0] ),
 			boost::accumulators::median( _acc[1] ),
 			boost::accumulators::median( _acc[2] )
-			*/
 			_acc[0].result( ),
 			_acc[1].result( ),
 			_acc[2].result( )
+			*/
+			_send_acc.result( ),
+			_rec_acc.result( ),
+			_rtt_acc.result( )
 	);
 }
 /*****************************************************************************/
