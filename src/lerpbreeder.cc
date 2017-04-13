@@ -120,14 +120,17 @@ LerpBreeder::get_initial_replacements( Point point )
 	auto intersend_alternatives( get_optimizer().intersend.alternatives( intersend, true ));
 
 	for ( const auto & alt_window: window_increment_alternatives ) {
+    printf("Initial alt window is %f\n", alt_window);
 		ActionTuple a = make_tuple( alt_window, window_multiple, intersend );
 		ret.push_back( a ); // add a point to try out
   }
   for ( const auto & alt_multiple: window_multiple_alternatives ) {
+    printf("Initial alt multiple is %f\n", alt_multiple);
 		ActionTuple a = make_tuple( window_increment, alt_multiple, intersend );
 		ret.push_back( a ); // add a point to try out
   }
 	for ( const auto & alt_intersend: intersend_alternatives ) {
+    printf("Initial alt intersend is %f\n", alt_intersend);
 		ActionTuple a = make_tuple( window_increment, window_multiple, alt_intersend );
 		ret.push_back( a ); // add a point to try out
   }
@@ -140,7 +143,8 @@ LerpBreeder::next_action_dir( Direction dir, ActionTuple current_action, int ste
 	double incr_change = ( dir.get_index( 0 ) == EQUALS ) ? 0 : ( dir.get_index( 0 ) == PLUS ) ? 1: -1;
 	double mult_change = ( dir.get_index( 1 ) == EQUALS ) ? 0 : ( dir.get_index( 1 ) == PLUS ) ? 1: -1;
 	double send_change = ( dir.get_index( 2 ) == EQUALS ) ? 0 : ( dir.get_index( 2 ) == PLUS ) ? 1: -1;
-
+  printf("The step is %d, incr_change: %f, mult_change: %f, send_change: %f\n", step, incr_change, mult_change, send_change );
+  printf("The current action is %s\n", _atuple_str( current_action ).c_str() );
 	double new_incr = CWND_INC( current_action ) + incr_change *num*WINDOW_INCR_CHANGE;
 	double new_mult = CWND_MULT( current_action ) + mult_change * num * WINDOW_MULT_CHANGE;
 	double new_send = MIN_SEND( current_action ) + send_change * num * INTERSEND_CHANGE;
@@ -151,15 +155,20 @@ LerpBreeder::next_action_dir( Direction dir, ActionTuple current_action, int ste
 pair< ActionScore, unordered_map< ActionTuple, double, HashAction > >
 LerpBreeder::internal_optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< WhiskerTree > eval, double current_score, unordered_map< ActionTuple, double, HashAction >  eval_cache, Point point )
 {
-	// generates replacements in a "smart" way
+  printf("Entering internal optimize point function -> score to beat is %f\n", current_score);
+  printf("Current best action tuple is %s\n", _atuple_str( point.second ).c_str() );
+  // generates replacements in a "smart" way
 	double score = current_score;
+  double original_score = current_score;
 	ActionTuple best_action = point.second;
-	ActionTuple original_action = point.second;
 	// get the initial directions
 	unordered_map< Direction, vector< ActionTuple >, boost::hash< Direction > > bin = get_direction_bins( point );
 
   vector< Direction > coordinates;
-
+  vector< pair< Dir, double > > best_directions(3);
+  best_directions[0] = make_pair( EQUALS, 0 );
+  best_directions[1] = make_pair( EQUALS, 0 );
+  best_directions[2] = make_pair( EQUALS, 0 );
   for ( int i=0; i < 3; i++ ) {
     Direction plus = Direction(EQUALS, EQUALS, EQUALS);
     Direction minus = Direction(EQUALS, EQUALS, EQUALS);
@@ -173,12 +182,29 @@ LerpBreeder::internal_optimize_point( SignalTuple signal, PointGrid & grid, Eval
   // first evaluate initial 6 directions
  	for ( Direction & dir: coordinates ) {
 		if ( bin.find( dir ) != bin.end() ) {
+      int change_index = -1;
+      Dir change_dir = EQUALS;
+      for ( int i = 0; i < 3; i++ ) {
+        if ( dir.get_index( i ) != EQUALS )
+          change_index = i;
+      }
+      if ( change_index != -1 ) {
+        change_dir = dir.get_index( change_index );
+      }
+      printf("Change index: %d,change_dir: %d\n", change_index, change_dir );
+      printf("Exploring direction %s\n", dir.str().c_str() );
 			// iterate through this direction and grab the best change to the point
+      // also find avg score change this change makes
+      double total_score_change = 0;
+      int count = 0;
 			for ( ActionTuple & a : bin.at( dir ) ) {
 				if ( eval_cache.find( a ) == eval_cache.end() ) {
 				PointGrid test_grid( grid, false );
 				test_grid._points[signal] = a;
 				double new_score = ( eval.score_lerp_parallel( test_grid, _carefulness ) ).score;
+        printf("Replaced %s to have action %s, score is %f\n", _stuple_str( signal ).c_str(), _atuple_str( a ).c_str(), new_score );
+        total_score_change += ( new_score - original_score );
+        count += 1;
 				if ( new_score > score ) {
 					score = new_score;
 					best_action = a;
@@ -186,29 +212,49 @@ LerpBreeder::internal_optimize_point( SignalTuple signal, PointGrid & grid, Eval
 				eval_cache.insert( make_pair( a , score ) );
 				} else {
 					double new_score = eval_cache.at( a );
+          total_score_change += ( new_score - original_score );
+          count += 1;
+
 					if ( new_score > score ) {
 						score = new_score;
 						best_action = a;
 					}
 				}
 			}
+      double avg_score_change = total_score_change/double(count);
+      printf("Avg score change is %f\n", avg_score_change );
+      if ( avg_score_change > 0 && change_index >= 0) {
+        best_directions[change_index] = make_pair( change_dir, avg_score_change );
+	      Direction changed_dir = Direction( best_directions[0].first, best_directions[1].first, best_directions[2].first );
+        printf("The bes directions is now %s\n", changed_dir.str().c_str() );
+      }
 		}
 	}
 
 	// now figure out what direction the best change was in
 	Direction equals = Direction( EQUALS, EQUALS, EQUALS );
-	Direction change_dir = Direction( original_action, best_action );
+	Direction change_dir = Direction( best_directions[0].first, best_directions[1].first, best_directions[2].first );
+  printf("The change dir is %s\n", change_dir.str().c_str() );
 	if ( change_dir == equals ) { // do not continue in a single direction
 		return make_pair( make_pair( best_action, score ), eval_cache );
 	}
 	int step = 1;
+  ActionTuple next_action = best_action;
 	while ( true ) {
-		ActionTuple next_action = next_action_dir( change_dir, next_action, step  );
+    printf("Entering while true\n");
+		next_action = next_action_dir( change_dir, next_action, step  );
+    printf("Calculated next action is %s\n", _atuple_str( next_action ).c_str() );
+    // check if the next action is invalid in someway
+    if ((  CWND_INC( next_action ) < MIN_WINDOW_INCR ) || ( CWND_INC( next_action ) > MAX_WINDOW_INCR ) ) { break; }
+    if ((  CWND_MULT( next_action ) < MIN_WINDOW_MULT ) || ( CWND_MULT( next_action ) > MAX_WINDOW_MULT ) ) { break; }
+    if ((  MIN_SEND( next_action ) < MIN_INTERSEND ) || ( CWND_INC( next_action ) > MAX_INTERSEND ) ) { break; }
+
 		double new_score = score;
 		if ( eval_cache.find( next_action ) == eval_cache.end() ) {
 			PointGrid test_grid( grid, false );
 			test_grid._points[signal] = next_action;
 			new_score = eval.score_lerp_parallel( test_grid, _carefulness ).score;
+        printf("Replaced %s to have action %s, score is %f\n", _atuple_str( next_action ).c_str(), _stuple_str( signal ).c_str(), new_score );
 		} else {
 			new_score = eval_cache.at( next_action );
 		}
@@ -236,10 +282,11 @@ LerpBreeder::optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< Wh
 		last_score = score;
 		Point point = make_pair( signal, best_action );
 		// run internal optimize point -> actual interesting work
-		pair< ActionScore, unordered_map< ActionTuple, double, HashAction > > ret = internal_optimize_point( signal, grid, eval, current_score, eval_cache, point );
+		pair< ActionScore, unordered_map< ActionTuple, double, HashAction > > ret = internal_optimize_point( signal, grid, eval, score, eval_cache, point );
 		eval_cache = ret.second;
 		best_action = ret.first.first;
 		score = ret.first.second;
+    printf("After one more round of internal optimize point, best action is %s and score is %f\n", _atuple_str( best_action ).c_str(), score );
 		if ( score == last_score ) {
 			break;
 		}
@@ -264,6 +311,7 @@ LerpBreeder::get_direction_bins( Point point_to_improve )
 
   for ( ActionTuple x: replacements ) {
     Direction direction = Direction( point_to_improve.second, x );
+    //printf("Replacement %s, calculated direction %s\n", _atuple_str( x ).c_str(), direction.str().c_str() );
     if ( map.find( direction ) == map.end() ) {
       // insert a new vector
       vector< ActionTuple > list;

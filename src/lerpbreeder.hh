@@ -13,9 +13,15 @@ using namespace std;
 #define WINDOW_INCR 0
 #define WINDOW_MULT 1
 #define INTERSEND 2
-#define WINDOW_INCR_CHANGE 2
+#define WINDOW_INCR_CHANGE 5
 #define WINDOW_MULT_CHANGE .01
-#define INTERSEND_CHANGE .1
+#define INTERSEND_CHANGE .2
+#define MIN_WINDOW_INCR 1
+#define MAX_WINDOW_INCR 400
+#define MIN_WINDOW_MULT .01
+#define MAX_WINDOW_MULT 1
+#define MIN_INTERSEND .002
+#define MAX_INTERSEND 30
 
 typedef pair< ActionTuple, double > ActionScore;
 /*#####
@@ -58,7 +64,7 @@ public:
     : _window_increment( PLUS ), _window_multiple( PLUS ), _intersend( PLUS )
     {
       _window_increment = get_direction( CWND_INC( original ), CWND_INC( replacement ) );
-      _window_multiple = get_direction( CWND_MULT( original ), CWND_INC( replacement ) );
+      _window_multiple = get_direction( CWND_MULT( original ), CWND_MULT( replacement ) );
       _intersend = get_direction( MIN_SEND( original ), MIN_SEND( replacement ) );
     }
   void replace( const int i, const Dir dir )
@@ -173,15 +179,14 @@ class LerpBreeder
 		double optimize_new_median( SignalTuple median, PointGrid & grid, double current_score );
 		unordered_map< Direction, vector< ActionTuple >, boost:: hash< Direction > > get_direction_bins( Point point_to_improve );
 		ActionTuple next_action_dir( Direction dir, ActionTuple current_action, int step );
-		//double single_simulation( PointGrid & grid );
 	public:
 		LerpBreeder( ConfigRange range ): _config_range( range ), _carefulness( 1 ) {}
 		Evaluator< WhiskerTree >::Outcome improve( PointGrid & grid);
 		static const OptimizationSettings & get_optimizer( void )
 		{
    		static OptimizationSettings default_settings {
-      	{ 0,    256, 1,    32,  4, 1 }, /* window increment */
-      	{ 0,    1,   0.01, 0.5, 4, 1 }, /* window multiple */
+      	{ 1,    256, 1,    32,  4, 1 }, /* window increment */
+      	{ .01,    1,   0.01, 0.5, 4, 1 }, /* window multiple */
       	{ 0.002, 3,   0.05, 1,   4, 3 } /* intersend */
     	};
     	return default_settings;
