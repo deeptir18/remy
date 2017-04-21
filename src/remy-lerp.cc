@@ -25,8 +25,12 @@ int main( int argc, char *argv[] )
 {
 	RemyBuffers::ConfigRange input_config;
 	string config_filename;
+  bool lerp_test = false;
 	for ( int i = 1; i < argc; i++ ) {
 		string arg( argv[i] );
+    if ( arg.substr(0, 4 ) == "test" ) {
+      lerp_test = true;
+    }
     if ( arg.substr(0, 3 ) == "cf=" ) {
       config_filename = string( arg.substr( 3 ) );
       int cfd = open( config_filename.c_str(), O_RDONLY );
@@ -52,6 +56,11 @@ int main( int argc, char *argv[] )
   }
 
 	PointGrid grid;
+  if ( lerp_test ) {
+    // set the grid to have an "optimal" point for 0,0,0 for testing
+    // inc=51.671,mult=0.34791,intr=0.466448
+    grid._points[make_tuple(0,0,0)] = make_tuple(54, .82, .35 );
+  }
   ConfigRange config_range = ConfigRange( input_config );
 	LerpBreeder breeder( config_range );
 

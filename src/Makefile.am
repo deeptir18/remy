@@ -1,9 +1,9 @@
 AM_CPPFLAGS = $(CXX11_FLAGS) -I../protobufs
 # AM_CXXFLAGS = $(PICKY_CXXFLAGS)
 AM_CXXFLAGS = -Wall -Wpedantic -Wextra
-LDADD = ../protobufs/libremyprotos.a -lm $(protobuf_LIBS)
+LDADD = ../protobufs/libremyprotos.a -lm $(protobuf_LIBS) -lCGAL -lgmp -lmpfr -lboost_system
 
-bin_PROGRAMS = remy remy-poisson remy-lerp sender-runner sender-logger scoring-example configuration inspect-config inspect-simulationsdata lerptester
+bin_PROGRAMS = remy remy-poisson remy-lerp sender-runner sender-logger scoring-example configuration inspect-config inspect-simulationsdata lerptester interp-test
 
 common_source = delay.hh evaluator.cc evaluator.hh                 \
 	exponential.hh link.hh link-templates.cc stochastic-loss.hh                      \
@@ -16,7 +16,7 @@ common_source = delay.hh evaluator.cc evaluator.hh                 \
 	utility.hh whisker.cc whisker.hh whiskertree.cc whiskertree.hh \
 	poly.hh                                                 \
 	aimd-templates.cc aimd.cc aimd.hh polysender-templates.cc polysender.cc polysender.hh                              \
-	lerpsender-templates.cc lerpsender.cc lerpsender.hh linterp.h p2.cc p2.h \
+	lerpsender-templates.cc lerpsender.cc lerpsender.hh linterp.h p2.cc p2.h delaunay_d_interp.h\
 	configrange.hh configrange.cc                              \
 	simulationresults.hh simulationresults.cc                      \
     action.hh fin.hh fin.cc fintree.cc fintree.hh  	               \
@@ -46,3 +46,4 @@ inspect_simulationsdata_SOURCES = inspect-simulationsdata.cc
 
 lerptester_SOURCES = $(common_source) lerptester.cc lerpbreeder.cc lerpbreeder.hh
 
+interp_test_SOURCES = $(common_source) interpcompare.cc

@@ -41,7 +41,7 @@ Evaluator< WhiskerTree >::Outcome LerpBreeder::improve( PointGrid & grid )
   return tmp;
 }
 
-size_t hash_value( const Direction& direction)
+size_t hash_value( const DirectionObj& direction)
 {
     size_t seed = 0;
     boost::hash_combine( seed, direction._intersend );
@@ -55,7 +55,7 @@ LerpBreeder::optimize_new_median( SignalTuple median, PointGrid & grid, double c
 {
 	LerpSender sender = LerpSender( grid );
 	ActionTuple interpolated_action = sender.interpolate( median );
-	Point median_pt = make_pair( median, interpolated_action );
+	PointObj median_pt = make_pair( median, interpolated_action );
 
 	// add the median point, with the interpolated action, to the grid
 	sender.add_inner_point( median_pt, grid );
@@ -85,7 +85,7 @@ LerpBreeder::check_bootstrap( PointGrid & grid )
 }
 
 vector< ActionTuple >
-LerpBreeder::get_replacements( Point point )
+LerpBreeder::get_replacements( PointObj point )
 {
 	vector< ActionTuple > ret;
 	double window_increment = CWND_INC( point.second );
@@ -108,7 +108,7 @@ LerpBreeder::get_replacements( Point point )
 }
 
 vector< ActionTuple >
-LerpBreeder::get_initial_replacements( Point point )
+LerpBreeder::get_initial_replacements( PointObj point )
 {
 	vector< ActionTuple > ret;
 	double window_increment = CWND_INC( point.second );
@@ -137,7 +137,7 @@ LerpBreeder::get_initial_replacements( Point point )
 	return ret;
 }
 ActionTuple
-LerpBreeder::next_action_dir( Direction dir, ActionTuple current_action, int step )
+LerpBreeder::next_action_dir( DirectionObj dir, ActionTuple current_action, int step )
 {
 	double num = double(step)* double( _carefulness );
 	double incr_change = ( dir.get_index( 0 ) == EQUALS ) ? 0 : ( dir.get_index( 0 ) == PLUS ) ? 1: -1;
@@ -153,7 +153,7 @@ LerpBreeder::next_action_dir( Direction dir, ActionTuple current_action, int ste
 
 
 pair< ActionScore, unordered_map< ActionTuple, double, HashAction > >
-LerpBreeder::internal_optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< WhiskerTree > eval, double current_score, unordered_map< ActionTuple, double, HashAction >  eval_cache, Point point )
+LerpBreeder::internal_optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< WhiskerTree > eval, double current_score, unordered_map< ActionTuple, double, HashAction >  eval_cache, PointObj point )
 {
   printf("Entering internal optimize point function -> score to beat is %f\n", current_score);
   printf("Current best action tuple is %s\n", _atuple_str( point.second ).c_str() );
@@ -162,16 +162,16 @@ LerpBreeder::internal_optimize_point( SignalTuple signal, PointGrid & grid, Eval
   double original_score = current_score;
 	ActionTuple best_action = point.second;
 	// get the initial directions
-	unordered_map< Direction, vector< ActionTuple >, boost::hash< Direction > > bin = get_direction_bins( point );
+	unordered_map< DirectionObj, vector< ActionTuple >, boost::hash< DirectionObj > > bin = get_direction_bins( point );
 
-  vector< Direction > coordinates;
+  vector< DirectionObj > coordinates;
   vector< pair< Dir, double > > best_directions(3);
   best_directions[0] = make_pair( EQUALS, 0 );
   best_directions[1] = make_pair( EQUALS, 0 );
   best_directions[2] = make_pair( EQUALS, 0 );
   for ( int i=0; i < 3; i++ ) {
-    Direction plus = Direction(EQUALS, EQUALS, EQUALS);
-    Direction minus = Direction(EQUALS, EQUALS, EQUALS);
+    DirectionObj plus = DirectionObj(EQUALS, EQUALS, EQUALS);
+    DirectionObj minus = DirectionObj(EQUALS, EQUALS, EQUALS);
 
     plus.replace( i, PLUS );
     minus.replace( i, MINUS );
@@ -180,7 +180,7 @@ LerpBreeder::internal_optimize_point( SignalTuple signal, PointGrid & grid, Eval
     coordinates.emplace_back( minus );
   }
   // first evaluate initial 6 directions
- 	for ( Direction & dir: coordinates ) {
+ 	for ( DirectionObj & dir: coordinates ) {
 		if ( bin.find( dir ) != bin.end() ) {
       int change_index = -1;
       Dir change_dir = EQUALS;
@@ -225,15 +225,15 @@ LerpBreeder::internal_optimize_point( SignalTuple signal, PointGrid & grid, Eval
       printf("Avg score change is %f\n", avg_score_change );
       if ( avg_score_change > 0 && change_index >= 0) {
         best_directions[change_index] = make_pair( change_dir, avg_score_change );
-	      Direction changed_dir = Direction( best_directions[0].first, best_directions[1].first, best_directions[2].first );
+	      DirectionObj changed_dir = DirectionObj( best_directions[0].first, best_directions[1].first, best_directions[2].first );
         printf("The bes directions is now %s\n", changed_dir.str().c_str() );
       }
 		}
 	}
 
 	// now figure out what direction the best change was in
-	Direction equals = Direction( EQUALS, EQUALS, EQUALS );
-	Direction change_dir = Direction( best_directions[0].first, best_directions[1].first, best_directions[2].first );
+	DirectionObj equals = DirectionObj( EQUALS, EQUALS, EQUALS );
+	DirectionObj change_dir = DirectionObj( best_directions[0].first, best_directions[1].first, best_directions[2].first );
   printf("The change dir is %s\n", change_dir.str().c_str() );
 	if ( change_dir == equals ) { // do not continue in a single direction
 		return make_pair( make_pair( best_action, score ), eval_cache );
@@ -280,7 +280,7 @@ LerpBreeder::optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< Wh
 	ActionTuple best_action = original_action;
 	while ( true ) {
 		last_score = score;
-		Point point = make_pair( signal, best_action );
+		PointObj point = make_pair( signal, best_action );
 		// run internal optimize point -> actual interesting work
 		pair< ActionScore, unordered_map< ActionTuple, double, HashAction > > ret = internal_optimize_point( signal, grid, eval, score, eval_cache, point );
 		eval_cache = ret.second;
@@ -302,15 +302,15 @@ single_simulation( PointGrid grid, Evaluator< WhiskerTree > eval, int carefulnes
   return score;
 }
 
-unordered_map< Direction, vector< ActionTuple >, boost:: hash< Direction > >
-LerpBreeder::get_direction_bins( Point point_to_improve )
+unordered_map< DirectionObj, vector< ActionTuple >, boost:: hash< DirectionObj > >
+LerpBreeder::get_direction_bins( PointObj point_to_improve )
 {
 	// sorts all whiskers in list into a map based on direction
   vector< ActionTuple > replacements = get_initial_replacements( point_to_improve );
-  unordered_map< Direction, vector< ActionTuple >, boost::hash< Direction >> map {};
+  unordered_map< DirectionObj, vector< ActionTuple >, boost::hash< DirectionObj >> map {};
 
   for ( ActionTuple x: replacements ) {
-    Direction direction = Direction( point_to_improve.second, x );
+    DirectionObj direction = DirectionObj( point_to_improve.second, x );
     //printf("Replacement %s, calculated direction %s\n", _atuple_str( x ).c_str(), direction.str().c_str() );
     if ( map.find( direction ) == map.end() ) {
       // insert a new vector

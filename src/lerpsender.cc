@@ -69,7 +69,7 @@ PointGrid::PointGrid( PointGrid & other, bool track )
 		 _rtt_acc( UPPER_QUANTILE ),
 		// _acc( NUM_SIGNALS, p2_t( UPPER_QUANTILE ) ),
 		// _acc( NUM_SIGNALS ),
-    _debug( false ),
+    _debug( other._debug ),
 	  _points( other._points ),
 	  _signals( other._signals )
 {}
@@ -107,7 +107,7 @@ string _atuple_str( ActionTuple t ) {
 	return stream.str();
 }
 
-string _point_str( Point p ) {
+string _point_str( PointObj p ) {
 	return _stuple_str(p.first) + " -> " + _atuple_str(p.second);
 }
 
@@ -120,11 +120,8 @@ string PointGrid::str() {
 }
 
 void PointGrid::track ( double s, double r, double t ) {
-	// printf("%f %f %f\n", s, r ,t);
-	// printf("%p %p %p\n", &(_acc[0]), &(_acc[1]), &(_acc[2]));
-	// printf("%f %f %f\n", _acc[0].result(), _acc[1].result(), _acc[2].result());
-	// printf("%f %f %f\n", _send_acc.result(), _rec_acc.result(), _rtt_acc.result());
 	if (_track) {
+	//printf("%f %f %f\n", s, r ,t);
 		/*
 		_acc[0]( s );
 		_acc[1]( r );
@@ -213,18 +210,21 @@ void LerpSender::update_actions( const Memory memory )
   double obs_send_ewma = (double)(memory.field( 0 ) );
   double obs_rec_ewma = (double)(memory.field( 1 ) );
   double obs_rtt_ratio = (double)(memory.field( 2 ) );
-  if ( _grid._debug ) {
-    printf("Obs values: [%f, %f, %f]\n", obs_send_ewma, obs_rec_ewma, obs_rtt_ratio );
-  }
 	_grid.track( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio );
 
 	ActionTuple a = interpolate( make_tuple( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio ) );
 
   _the_window = min( max( 0.0,  _the_window * CWND_MULT(a) + CWND_INC(a)  ), 1000000.0 );
   _intersend_time = MIN_SEND(a);
+  if ( _grid._debug ) {
+    if ( ( rand() % 100000 ) == 87 ) {
+      printf("Obs values: [%f, %f, %f]\n", obs_send_ewma, obs_rec_ewma, obs_rtt_ratio );
+      printf("Window/intersend values: [%f, %f]\n", _the_window, _intersend_time );
+    }
+  }
 }
 
-void LerpSender::add_inner_point( const Point point, PointGrid & grid ) {
+void LerpSender::add_inner_point( const PointObj point, PointGrid & grid ) {
 	// Add inner point
 	grid._points[point.first] = point.second;
 

@@ -32,7 +32,7 @@ typedef tuple<double,double,double> ActionTuple;
 #define CWND_INC(a)  get <0>(a)
 #define CWND_MULT(a) get <1>(a)
 #define MIN_SEND(a)  get <2>(a)
-typedef pair<SignalTuple,ActionTuple> Point;
+typedef pair<SignalTuple,ActionTuple> PointObj;
 
 #define DEFAULT_INCR 1
 #define DEFAULT_MULT 1
@@ -53,7 +53,7 @@ struct InterpInfo {
 
 string _stuple_str( SignalTuple t );
 string _atuple_str( ActionTuple t );
-string _point_str( Point p );
+string _point_str( PointObj p );
 struct HashAction{
 	size_t operator()(const ActionTuple& a) const{
 		return (
@@ -155,7 +155,7 @@ public:
   void send( const unsigned int id, NextHop & next, const double & tickno );
   LerpSender & operator=( const LerpSender & ) { assert( false ); return *this; }
 
-	void add_inner_point ( const Point point, PointGrid & grid );
+	void add_inner_point ( const PointObj point, PointGrid & grid );
 	ActionTuple interpolate ( double s, double r, double t );
 	ActionTuple interpolate_linterp( double s, double r, double t, InterpInfo info);
 	ActionTuple interpolate ( SignalTuple t );

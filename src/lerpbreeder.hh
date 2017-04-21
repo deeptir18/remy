@@ -41,7 +41,7 @@ enum Dir {
   EQUALS
 };
 
-class Direction
+class DirectionObj
 {
 private:
   Dir _window_increment;
@@ -58,9 +58,9 @@ private:
     return MINUS;
 }
 public:
-  Direction( const Dir window_increment, const Dir window_multiple, const Dir intersend )
+  DirectionObj( const Dir window_increment, const Dir window_multiple, const Dir intersend )
     : _window_increment( window_increment ), _window_multiple( window_multiple ), _intersend( intersend ) {}
-  Direction( const ActionTuple original, const ActionTuple replacement )
+  DirectionObj( const ActionTuple original, const ActionTuple replacement )
     : _window_increment( PLUS ), _window_multiple( PLUS ), _intersend( PLUS )
     {
       _window_increment = get_direction( CWND_INC( original ), CWND_INC( replacement ) );
@@ -85,12 +85,12 @@ public:
 		return _intersend;
   }
 
-  bool operator==( const Direction& other ) const { return
+  bool operator==( const DirectionObj& other ) const { return
 		( _window_increment == other._window_increment ) &&
 		( _window_multiple == other._window_multiple ) &&
 		( _intersend == other._intersend ); }
 
-		bool operator!=( const Direction& other ) const { return
+		bool operator!=( const DirectionObj& other ) const { return
 		( _window_increment != other._window_increment ) ||
 		( _window_multiple != other._window_multiple ) ||
 		( _intersend != other._intersend ); }
@@ -107,7 +107,7 @@ public:
 		snprintf(tmp, 256, "{%s, %s, %s}: {incr, mult, intersend}\n", print_map[_window_increment].c_str(), print_map[_window_multiple].c_str(), print_map[_intersend].c_str() );
     return tmp;
 }
-  friend size_t hash_value( const Direction& direction );
+  friend size_t hash_value( const DirectionObj& direction );
 };
 
 /*########################################################################*/
@@ -171,14 +171,14 @@ class LerpBreeder
 	private:
 		ConfigRange _config_range;
 		int _carefulness;
-		vector< ActionTuple > get_replacements( Point point_to_improve );
-		vector< ActionTuple > get_initial_replacements( Point point_to_improve );
+		vector< ActionTuple > get_replacements( PointObj point_to_improve );
+		vector< ActionTuple > get_initial_replacements( PointObj point_to_improve );
 		bool check_bootstrap( PointGrid & grid );
-		pair< ActionScore, unordered_map< ActionTuple, double, HashAction > > internal_optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< WhiskerTree > eval, double current_score, std::unordered_map< ActionTuple, double, HashAction > eval_cache, Point point );
+		pair< ActionScore, unordered_map< ActionTuple, double, HashAction > > internal_optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< WhiskerTree > eval, double current_score, std::unordered_map< ActionTuple, double, HashAction > eval_cache, PointObj point );
 		ActionScore optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< WhiskerTree > eval, double current_score );
 		double optimize_new_median( SignalTuple median, PointGrid & grid, double current_score );
-		unordered_map< Direction, vector< ActionTuple >, boost:: hash< Direction > > get_direction_bins( Point point_to_improve );
-		ActionTuple next_action_dir( Direction dir, ActionTuple current_action, int step );
+		unordered_map< DirectionObj, vector< ActionTuple >, boost:: hash< DirectionObj > > get_direction_bins( PointObj point_to_improve );
+		ActionTuple next_action_dir( DirectionObj dir, ActionTuple current_action, int step );
 	public:
 		LerpBreeder( ConfigRange range ): _config_range( range ), _carefulness( 1 ) {}
 		Evaluator< WhiskerTree >::Outcome improve( PointGrid & grid);
