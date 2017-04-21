@@ -19,15 +19,15 @@ typedef tuple< double, double, double, double > NewSignalTuple; // with slow rec
 #define SEND_EWMA(s) get <0>(s)
 #define REC_EWMA(s)  get <1>(s)
 #define RTT_RATIO(s) get <2>(s)
-#define SLOW_SEND_EWMA(s) get <3>(s)
+#define SLOW_REC_EWMA(s) get <3>(s)
 
 string _stuplenew_str( NewSignalTuple t ) {
 	ostringstream stream;
 	stream << "S[send=" 
 		     << SEND_EWMA(t) << ",rec=" 
 		     << REC_EWMA(t) << ",ratio=" 
-				 << RTT_RATIO(t) << ", slow_send=" 
-         << SLOW_SEND_EWMA(t) 
+				 << RTT_RATIO(t) << ", slow_rec=" 
+         << SLOW_REC_EWMA(t) 
 				 << "]";
 	return stream.str();
 }
@@ -37,7 +37,7 @@ ActionTuple interpolate_with_whisker( WhiskerTree whiskers, NewSignalTuple s )
  // modify it to contain the new signal tuple
  // then find the whisker with this signal tuple and return this whisker's action 
   // order send_ewma, rec_ewma, rtt_ratio, slow_rec_ewma, rtt_diff, queueing_delay
-  Memory memory( { SEND_EWMA( s ), REC_EWMA( s ), RTT_RATIO( s ), SLOW_SEND_EWMA( s ), 0, 0 } );
+  Memory memory( { SEND_EWMA( s ), REC_EWMA( s ), RTT_RATIO( s ), SLOW_REC_EWMA( s ), 0, 0 } );
   const Whisker & whisker( whiskers.use_whisker( memory, false ) );
   double window_increment = double(whisker.window_increment());
   double window_multiple = whisker.window_multiple();
