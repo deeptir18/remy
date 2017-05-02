@@ -1,15 +1,12 @@
-#include "delaunay_d_interp.h"
 #include <cstdio>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
 #include "ratbreeder.hh"
 #include "dna.pb.h"
 #include "configrange.hh"
-#include "lerpsender.hh"
-#include "lerpbreeder.hh"
+#include "lerpsender.cc"
 #include "memory.hh"
 /*This file takes in an input whisker as well as hardcodes a grid for the grid ::q
   :interpolation and a grid map for the delaunay interpolation,

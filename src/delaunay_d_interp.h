@@ -1,3 +1,5 @@
+#ifndef _delaunay_d_interp_h
+#define _delaunay_d_interp_h
 
 #include <assert.h>
 #include <math.h>
@@ -1148,5 +1150,4 @@ Point get_lifted_point(boost::shared_ptr<Delaunay_d> pDelaunay, Point const &x) 
   Delaunay_d::Lifted_point_d lp = lift(x);
   return lp;
 }
-
-                                         
+#endif 

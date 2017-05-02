@@ -29,6 +29,9 @@ int main( int argc, char *argv[] )
 	double rec_ewma = 0;
 	string config_filename;
   bool interp_test_only = true;
+  RemyBuffers::WhiskerTree tree;
+  WhiskerTree whiskers;
+  bool included_whisker = false;
 	for ( int i = 1; i < argc; i++ ) {
 		string arg( argv[i] );
 		if ( arg.substr( 0, 4 ) == "rtt=" ) {
@@ -52,8 +55,31 @@ int main( int argc, char *argv[] )
         perror( "close" );
         exit( 1 );
       }
+    } else if ( arg.substr( 0, 3 ) == "if=" ) {
+      included_whisker = true;
+      string filename( arg.substr( 3 ) );
+      int fd = open( filename.c_str(), O_RDONLY );
+      if ( fd < 0 ) {
+	perror( "open" );
+	exit( 1 );
+      }
+
+      if ( !tree.ParseFromFileDescriptor( fd ) ) {
+	fprintf( stderr, "Could not parse %s.\n", filename.c_str() );
+	exit( 1 );
+      }
+      whiskers = WhiskerTree( tree );
+
+      if ( close( fd ) < 0 ) {
+	perror( "close" );
+	exit( 1 );
+      }
     }
 	}
+
+  if ( included_whisker ) {
+    printf("Included a whisker\n");
+  }
 
   if (!( config_filename.empty() )) {
     interp_test_only = false;
@@ -74,46 +100,7 @@ int main( int argc, char *argv[] )
 	printf("Maps %s -> %s\n", _stuple_str( signal ).c_str(), _atuple_str( a ).c_str() );
 
 
-  //ActionTuple na = make_tuple( 100, .9, .14 );
-  //sender.add_inner_point( make_pair( ns, na ), grid );
-	//printf("Grid is %s\n", grid.str().c_str() );
-
-  //signal = make_tuple( send_ewma, rec_ewma, rtt_ratio );
-	//a = sender.interpolate( signal );
 	printf("Now Maps %s -> %s\n", _stuple_str( signal ).c_str(), _atuple_str( a ).c_str() );
-  } else {
-	  grid._points[make_tuple(0,0,0)] = make_tuple( 54, .82, .35);
-    grid._debug = false;
-    ConfigRange config_range = ConfigRange( input_config );
-    Evaluator< WhiskerTree > eval( config_range );
-
-    // add a median
-    //grid._debug = true;
-    SignalTuple median = eval.grid_get_median_signal( grid, 1 );
-    LerpSender sender( grid );
-    ActionTuple interpolated_action = sender.interpolate( median );
-    printf("The original interpolated action is %s\n", _atuple_str( interpolated_action ).c_str() );
-    sender.add_inner_point( make_pair( median, interpolated_action ), grid );
-    printf("New median is %s\n", _stuple_str( median ).c_str() );
-    // now try changing the median
-    grid._points[median] = make_tuple(17, .7, .04);
-    grid._points[make_tuple( SEND_EWMA( median ), 0 , 0)] = make_tuple(15, .9, .002);
-    grid._points[make_tuple( 0, REC_EWMA( median ), 0)] = make_tuple(20, .8, .5);
-    grid._points[make_tuple( 0, 0, MIN_SEND( median ) )] = make_tuple(10, .6, .04);
-    grid._points[make_tuple( SEND_EWMA( median ), REC_EWMA( median ) , 0)] = make_tuple(40, .9, .002);
-    grid._points[make_tuple( 0, REC_EWMA( median ), MIN_SEND( median ))] = make_tuple(30, .8, .5);
-    grid._points[make_tuple( SEND_EWMA( median ), 0,  MIN_SEND( median ))] = make_tuple(80, .8, .5);
-    grid._points[make_tuple( 0, 0, MIN_SEND( median ) )] = make_tuple(60, .6, .04);
-    // test that the observed values are not crazy after adding the median
-    printf("About to score with grid %s\n", grid.str().c_str());
-    grid._debug = true;
-    double score = ( eval.score_lerp_parallel( grid, 1 )).score;
-    printf("Score is %f\n", score);
-
-    // now try to get a new median
-   /* median_2 = eval.grid_get_median_signal( grid, 1 );
-    ActionTuple interpolated_action_2 = sender.interpolate( median );
-    printf("The original interpolated action is %s for median s is \n", _atuple_str( interpolated_action_2 ).c_str(), _stuple_str( median_2 ) );*/
   }
 
 }

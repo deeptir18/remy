@@ -3,7 +3,7 @@ AM_CPPFLAGS = $(CXX11_FLAGS) -I../protobufs
 AM_CXXFLAGS = -Wall -Wpedantic -Wextra
 LDADD = ../protobufs/libremyprotos.a -lm $(protobuf_LIBS) -lCGAL -lgmp -lmpfr -lboost_system
 
-bin_PROGRAMS = remy remy-poisson remy-lerp sender-runner sender-logger scoring-example configuration inspect-config inspect-simulationsdata lerptester interp-test
+bin_PROGRAMS = remy remy-poisson remy-lerp sender-runner sender-logger scoring-example configuration inspect-config inspect-simulationsdata lerptester
 
 common_source = delay.hh evaluator.cc evaluator.hh                 \
 	exponential.hh link.hh link-templates.cc stochastic-loss.hh                      \
@@ -46,4 +46,3 @@ inspect_simulationsdata_SOURCES = inspect-simulationsdata.cc
 
 lerptester_SOURCES = $(common_source) lerptester.cc lerpbreeder.cc lerpbreeder.hh
 
-interp_test_SOURCES = $(common_source) interpcompare.cc

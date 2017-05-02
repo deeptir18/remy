@@ -29,6 +29,11 @@ void Rat::packets_received( const vector< Packet > & packets ) {
 
   _the_window = current_whisker.window( _the_window );
   _intersend_time = current_whisker.intersend();
+  int random = rand() % 10000;
+  if ( random == 87 ) {
+  printf("Memory: %s\n", _memory.str().c_str());
+  printf("[%d, %f]\n", _the_window, _intersend_time);
+  }
 }
 
 void Rat::reset( const double & )

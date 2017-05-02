@@ -5,8 +5,8 @@
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/accumulators/statistics/median.hpp> 
+#include "delaunay_d_interp.h"
 #include <stdlib.h>
-#include "linterp.h"
 #include "p2.h"
 #include <stdio.h>
 
@@ -263,7 +263,7 @@ void LerpSender::add_inner_point( const PointObj point, PointGrid & grid ) {
 						 ( y == REC_EWMA(point.first ) )  || 
 						 ( z == RTT_RATIO(point.first ) ) ) {
 					SignalTuple tmp = make_tuple(x,y,z);
-					grid._points[tmp] = interpolate_linterp(x,y,z,interp);
+					grid._points[tmp] = interpolate_delaunay(x,y,z);
 					if (find( grid._signals[0].begin(), grid._signals[0].end(), x ) == grid._signals[0].end()) {
 						grid._signals[0].push_back( x );
 					}
@@ -405,7 +405,7 @@ ActionTuple LerpSender::interpolate( SignalTuple t ) {
 			interp = info;
     }
 	}
-	return interpolate_linterp( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio, interp );
+	return interpolate_delaunay( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio);
 }
 
 void LerpSender::update_interp_info( void )
@@ -432,31 +432,35 @@ LerpSender::print_interp_info( InterpInfo info ) {
   printf("----\n");
 }
 
-ActionTuple LerpSender::interpolate_linterp( double s, double r, double t, InterpInfo info) {
-  int length = 2;
-  vector<double> grid1 = linspace(info.min_send_ewma, info.max_send_ewma, length);
-  vector<double> grid2 = linspace(info.min_rec_ewma, info.max_rec_ewma, length);
-  vector<double> grid3 = linspace(info.min_rtt_ratio, info.max_rtt_ratio, length);
-  vector< vector<double>::iterator > grid_iter_list;
+ActionTuple LerpSender::interpolate_delaunay( double s, double r, double t ) {
+  printf("Trying to interpolate %f, %f, %f\n", s, r, t);
+  Delaunay_incremental_interp_d incr_triang(3);
+  Delaunay_incremental_interp_d mult_triang(3);
+  Delaunay_incremental_interp_d send_triang(3);
+  for ( auto it = _grid._points.begin(); it != _grid._points.end(); ++it ) {
+    ActionTuple a = it->second;
+    SignalTuple signal = it->first;
+    printf("S is %s, A is %s\n", _atuple_str( a ).c_str(), _stuple_str( signal ).c_str() );
+    array< double, 3 > args = {SEND_EWMA( signal ), REC_EWMA( signal ), RTT_RATIO( signal )};
+    double window_incr = CWND_INC( a );
+    double window_mult = CWND_MULT( a );
+    double intersend = MIN_SEND( a );
+    incr_triang.insert( args.begin(), args.end(), window_incr );
+    mult_triang.insert( args.begin(), args.end(), window_mult );
+    send_triang.insert( args.begin(), args.end(), intersend );
+    printf("Was able to insert into the triangle\n");
+  }
 
-  grid_iter_list.push_back(grid1.begin());
-  grid_iter_list.push_back(grid2.begin());
-	grid_iter_list.push_back(grid3.begin());
-
-
-  //print_interp_info( info );
-
-	InterpMultilinear<3, double > interp_ML_incr( grid_iter_list.begin(), info.grid_sizes.begin(), info.window_incr_vals.data(), info.window_incr_vals.data() + 8);
-	InterpMultilinear<3, double > interp_ML_mult( grid_iter_list.begin(), info.grid_sizes.begin(), info.window_mult_vals.data(), info.window_mult_vals.data() + 8);
-	InterpMultilinear<3, double > interp_ML_send( grid_iter_list.begin(), info.grid_sizes.begin(), info.intersend_vals.data(), info.intersend_vals.data() + 8);
-  array< double, 3> args = {s,r,t};
-
-	double incr = interp_ML_incr.interp( args.begin() );
-	double mult = interp_ML_mult.interp( args.begin() );
-	double send = interp_ML_send.interp( args.begin() );
-
-  return make_tuple( incr, mult, send );
+  // now interpolate each
+  array< double, 3 > interp_args = { s, r, t};
+  printf("Declared array\n");
+  double interpolated_incr = incr_triang.interp( interp_args.begin(), interp_args.end() );
+  printf("Not able to interpolate fml\n");
+  double interpolated_mult = mult_triang.interp( interp_args.begin(), interp_args.end() );
+  double interpolated_send = send_triang.interp( interp_args.begin(), interp_args.end() );
+  return make_tuple( interpolated_incr, interpolated_mult, interpolated_send );
 }
+
 
 ActionTuple LerpSender::interpolate( double obs_send_ewma, double obs_rec_ewma, double obs_rtt_ratio ) {
 

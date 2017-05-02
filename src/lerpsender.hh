@@ -157,7 +157,7 @@ public:
 
 	void add_inner_point ( const PointObj point, PointGrid & grid );
 	ActionTuple interpolate ( double s, double r, double t );
-	ActionTuple interpolate_linterp( double s, double r, double t, InterpInfo info);
+  ActionTuple interpolate_delaunay( double s, double r, double t );
 	ActionTuple interpolate ( SignalTuple t );
 
 };
