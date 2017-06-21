@@ -44,6 +44,7 @@ public:
 
   RemyBuffers::WhiskerTree DNA( void ) const;
   WhiskerTree( const RemyBuffers::WhiskerTree & dna );
+  vector< Whisker > get_leaves( vector< Whisker > leaves ) const;
 };
 
 #endif

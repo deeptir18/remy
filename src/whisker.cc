@@ -94,6 +94,12 @@ void Whisker::round( void )
   _intersend = (1.0/10000.0) * int( 10000 * _intersend );
 }
 
+Memory Whisker::get_median_point( void ) const
+{
+  // domain is protected
+  return _domain.range_median();
+}
+
 size_t hash_value( const Whisker & whisker )
 {
   size_t seed = 0;

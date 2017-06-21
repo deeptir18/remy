@@ -33,6 +33,7 @@ public:
   
   RemyBuffers::Whisker DNA( void ) const;
   Whisker( const RemyBuffers::Whisker & dna );
+  Memory get_median_point( void ) const;
   
   void round( void );
 

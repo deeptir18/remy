@@ -87,6 +87,17 @@ int PointGrid::size() {
 	return _points.size();
 }
 
+string _stuple_str( NewSignalTuple t ) {
+	ostringstream stream;
+	stream << "S[send=" 
+		     << SEND_EWMA(t) << ",rec=" 
+		     << REC_EWMA(t) << ",ratio=" 
+				 << RTT_RATIO(t) << ",slow_rec="
+         << SLOW_REC_EWMA( t )
+				 << "]";
+	return stream.str();
+}
+
 string _stuple_str( SignalTuple t ) {
 	ostringstream stream;
 	stream << "S[send=" 

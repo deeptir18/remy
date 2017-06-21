@@ -23,11 +23,14 @@ using namespace std;
 #define MAX_REC_EWMA 300
 #define MAX_RTT_RATIO 100
 
-#define NUM_SIGNALS 3 
+#define NUM_SIGNALS 3
 typedef tuple<double,double,double> SignalTuple;
+typedef tuple<double,double,double,double> NewSignalTuple;
+
 #define SEND_EWMA(s) get <0>(s)
 #define REC_EWMA(s)  get <1>(s)
 #define RTT_RATIO(s) get <2>(s)
+#define SLOW_REC_EWMA(s) get <3>(s)
 typedef tuple<double,double,double> ActionTuple;
 #define CWND_INC(a)  get <0>(a)
 #define CWND_MULT(a) get <1>(a)
@@ -50,7 +53,7 @@ struct InterpInfo {
 	std::vector< double > window_mult_vals;
 	std::vector< double > intersend_vals;
 };
-
+string _stuple_str( NewSignalTuple t );
 string _stuple_str( SignalTuple t );
 string _atuple_str( ActionTuple t );
 string _point_str( PointObj p );

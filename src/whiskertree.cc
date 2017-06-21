@@ -266,3 +266,21 @@ WhiskerTree::WhiskerTree( const RemyBuffers::WhiskerTree & dna )
     }
   }
 }
+
+vector< Whisker >
+WhiskerTree::get_leaves( vector< Whisker > leaves ) const {
+  if ( _leaf.size() != 0 ) {
+    assert( _children.size() == 0 );
+    for ( const Whisker& x: _leaf ) {
+      leaves.emplace_back( x );
+    }
+  } else {
+    assert( _children.size() > 0 );
+    for ( const auto &x : _children ) {
+    leaves = x.get_leaves( leaves );
+    }
+  }
+
+    return leaves;
+
+}
