@@ -176,7 +176,6 @@ class LerpBreeder
 		bool check_bootstrap( PointGrid & grid );
 		pair< ActionScore, unordered_map< ActionTuple, double, HashAction > > internal_optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< WhiskerTree > eval, double current_score, std::unordered_map< ActionTuple, double, HashAction > eval_cache, PointObj point );
 		ActionScore optimize_point( SignalTuple signal, PointGrid & grid, Evaluator< WhiskerTree > eval, double current_score );
-		double optimize_new_median( SignalTuple median, PointGrid & grid, double current_score );
 		unordered_map< DirectionObj, vector< ActionTuple >, boost:: hash< DirectionObj > > get_direction_bins( PointObj point_to_improve );
 		ActionTuple next_action_dir( DirectionObj dir, ActionTuple current_action, int step );
 	public:

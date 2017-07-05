@@ -58,9 +58,6 @@ public:
 	Outcome score_lerp_parallel(
 			PointGrid & grid,
 			const double carefulness = 1) const;
-  SignalTuple grid_get_median_signal(
-      PointGrid & grid,
-      const double carefuless = 1) const;
   static Evaluator::Outcome parse_problem_and_evaluate( const ProblemBuffers::Problem & problem );
 
   static Outcome score( T & run_actions,
@@ -81,11 +78,6 @@ public:
       const unsigned int ticks_to_run );
 
 	static Outcome score_lerp_parallel(
-			PointGrid & grid,
-			const unsigned int prng_seed,
-			const std::vector< NetConfig > & configs,
-			const unsigned int ticks_to_run );
-  static SignalTuple grid_get_median_signal(
 			PointGrid & grid,
 			const unsigned int prng_seed,
 			const std::vector< NetConfig > & configs,

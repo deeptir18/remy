@@ -59,7 +59,7 @@ int main( int argc, char *argv[] )
   if ( lerp_test ) {
     // set the grid to have an "optimal" point for 0,0,0 for testing
     // inc=51.671,mult=0.34791,intr=0.466448
-    grid._points[make_tuple(0,0,0)] = make_tuple(54, .82, .35 );
+    grid._points[make_tuple(0,0,0,0)] = make_tuple(54, .82, .35 );
   }
   ConfigRange config_range = ConfigRange( input_config );
 	LerpBreeder breeder( config_range );

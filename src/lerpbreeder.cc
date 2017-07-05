@@ -9,18 +9,19 @@ Evaluator< WhiskerTree >::Outcome LerpBreeder::improve( PointGrid & grid )
 
 	double score_to_beat = (eval.score_lerp_parallel( grid, _carefulness )).score;
 	printf("Initial score to beat is %f\n", score_to_beat );
-	if ( (check_bootstrap( grid )) ) {
-		printf("Trying to optimize the 8 initial points\n");
-		// make a tuple with the signal value tuples to optimize
-		vector< SignalTuple > signals;
-		for ( double send_ewma = 0; send_ewma <= MAX_SEND_EWMA; send_ewma += MAX_SEND_EWMA ) {
-			for ( double rec_ewma = 0; rec_ewma <= MAX_REC_EWMA; rec_ewma += MAX_REC_EWMA ) {
-				for ( double rtt_ratio = 0; rtt_ratio <= MAX_RTT_RATIO; rtt_ratio += MAX_RTT_RATIO ) {
-					SignalTuple signal = make_tuple( send_ewma, rec_ewma, rtt_ratio );
-					signals.emplace_back( signal );
-				}
+  printf("Trying to optimize the 8 initial points\n");
+  // make a tuple with the signal value tuples to optimize
+	vector< SignalTuple > signals;
+	for ( double send_ewma = 0; send_ewma <= MAX_SEND_EWMA; send_ewma += MAX_SEND_EWMA ) {
+		for ( double rec_ewma = 0; rec_ewma <= MAX_REC_EWMA; rec_ewma += MAX_REC_EWMA ) {
+			for ( double rtt_ratio = 0; rtt_ratio <= MAX_RTT_RATIO; rtt_ratio += MAX_RTT_RATIO ) {
+         for ( double slow_rec_ewma = 0; slow_rec_ewma <= MAX_SLOW_REC_EWMA; slow_rec_ewma += MAX_SLOW_REC_EWMA ) {
+					 SignalTuple signal = make_tuple( send_ewma, rec_ewma, rtt_ratio, slow_rec_ewma );
+					 signals.emplace_back( signal );
+         }
 			}
 		}
+	}
 		// for ( SignalTuple signal: signals) {
 		  SignalTuple signal = signals[0];
 			ActionScore opt_action = optimize_point( signal, grid, eval, score_to_beat );
@@ -28,14 +29,6 @@ Evaluator< WhiskerTree >::Outcome LerpBreeder::improve( PointGrid & grid )
 			score_to_beat = opt_action.second;
 	  // }
 
-	} else {
-		PointGrid test_grid( grid, true );
-    printf("Looking for a new median\n");
-    SignalTuple median = eval.grid_get_median_signal( test_grid, _carefulness);
-		printf("New median is %s\n", _stuple_str(median).c_str());
-		double new_score = optimize_new_median( median, grid, score_to_beat );
-		printf("New score after adding the new median is %f\n", new_score );
-	}
   Evaluator<WhiskerTree>::Outcome tmp;
   tmp.score = score_to_beat;
   return tmp;
@@ -48,40 +41,6 @@ size_t hash_value( const DirectionObj& direction)
     boost::hash_combine( seed, direction._window_multiple );
     boost::hash_combine( seed, direction._window_increment );
     return seed;
-}
-
-double
-LerpBreeder::optimize_new_median( SignalTuple median, PointGrid & grid, double current_score )
-{
-	LerpSender sender = LerpSender( grid );
-	ActionTuple interpolated_action = sender.interpolate( median );
-	PointObj median_pt = make_pair( median, interpolated_action );
-
-	// add the median point, with the interpolated action, to the grid
-	sender.add_inner_point( median_pt, grid );
-	printf("GRID AFTER ADDING PT: \n%s\n", grid.str().c_str() );
-	Evaluator< WhiskerTree > eval( _config_range );
-	ActionScore best_new_action = optimize_point( median, grid, eval, current_score );
-	assert ( best_new_action.second >= current_score );
-
-	// modify the grid to contain the new median point, and return the score
-	grid._points[ median ] = best_new_action.first;
-	return best_new_action.second;
-}
-bool
-LerpBreeder::check_bootstrap( PointGrid & grid )
-{
-	// TODO: change to be just  checking the first point
-	if ( grid.size() != 8 ) {
-		return false;
-	}
-	for ( SignalActionMap::iterator it = grid.begin(); it != grid.end(); ++it ) {
-		ActionTuple a = it->second;
-		if ( ( CWND_INC( a ) != DEFAULT_INCR ) || ( CWND_MULT( a ) != DEFAULT_MULT ) || ( MIN_SEND( a ) != DEFAULT_SEND ) ) {
-			return false;
-		}
-	}
-	return true;
 }
 
 vector< ActionTuple >

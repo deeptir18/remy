@@ -1,3 +1,4 @@
+#include "lerpsender.hh"
 #include <limits>
 #include <iomanip>
 #include <algorithm>
@@ -10,7 +11,6 @@
 #include "p2.h"
 #include <stdio.h>
 
-#include "lerpsender.hh"
 using namespace std;
 
 static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
@@ -26,40 +26,22 @@ static constexpr double INITIAL_WINDOW = 100; /* INITIAL WINDOW OF 1 */
 		 _send_acc( UPPER_QUANTILE ),
 		 _rec_acc( UPPER_QUANTILE ),
 		 _rtt_acc( UPPER_QUANTILE ),
+     _slow_rec_acc( UPPER_QUANTILE ),
      _debug( false ),
-	   _points( ),
-     _signals( NUM_SIGNALS )
+	   _points( )
 {
 	// Default values: set all 8 corners of the box to the default action
 	for ( int i = 0; i <= MAX_SEND_EWMA; i += MAX_SEND_EWMA) {
 		for ( int j = 0; j <= MAX_REC_EWMA; j += MAX_REC_EWMA) {
 			for ( int k = 0; k <= MAX_RTT_RATIO; k += MAX_RTT_RATIO) {
-				_points[make_tuple(i,j,k)] = 
-					make_tuple(DEFAULT_INCR,DEFAULT_MULT,DEFAULT_SEND);
+        for ( int l = 0; l <= MAX_SLOW_REC_EWMA; l += MAX_SLOW_REC_EWMA ) {
+				  _points[make_tuple(i,j,k, l)] = make_tuple(double(DEFAULT_INCR),double(DEFAULT_MULT),double(DEFAULT_SEND));
+        }
 			}
 		}
 	}
-	_signals[0] = { 0, MAX_SEND_EWMA };
-	_signals[1] = { 0, MAX_REC_EWMA };
-	_signals[2] = { 0, MAX_RTT_RATIO };
 }
 
-/*
-void PointGrid::Test( ) {
-		boost::array<double,5> probs = {0.001,0.01,0.1,.99,0.999};
-		acc_quantile_t accc( acc_prob_param = probs);
-
-		for (double i=0.0; i<10000.; ++i) {
-			accc(i);
-		}
-
-		for (std::size_t i=0; i < probs.size(); ++i)
-		{
-			    printf("%f: %f\n", probs[i],boost::accumulators::extended_p_square(accc)[i]);
-		}
-		return;
-}
-*/
 
 // Copy constructor
 PointGrid::PointGrid( PointGrid & other, bool track )
@@ -67,11 +49,9 @@ PointGrid::PointGrid( PointGrid & other, bool track )
 		 _send_acc( UPPER_QUANTILE ),
 		 _rec_acc( UPPER_QUANTILE ),
 		 _rtt_acc( UPPER_QUANTILE ),
-		// _acc( NUM_SIGNALS, p2_t( UPPER_QUANTILE ) ),
-		// _acc( NUM_SIGNALS ),
+     _slow_rec_acc( UPPER_QUANTILE),
     _debug( other._debug ),
-	  _points( other._points ),
-	  _signals( other._signals )
+	  _points( other._points )
 {}
 
 // For iterating through all points in the grid
@@ -87,23 +67,13 @@ int PointGrid::size() {
 	return _points.size();
 }
 
-string _stuple_str( NewSignalTuple t ) {
+string _stuple_str( SignalTuple t ) {
 	ostringstream stream;
 	stream << "S[send=" 
 		     << SEND_EWMA(t) << ",rec=" 
 		     << REC_EWMA(t) << ",ratio=" 
 				 << RTT_RATIO(t) << ",slow_rec="
          << SLOW_REC_EWMA( t )
-				 << "]";
-	return stream.str();
-}
-
-string _stuple_str( SignalTuple t ) {
-	ostringstream stream;
-	stream << "S[send=" 
-		     << SEND_EWMA(t) << ",rec=" 
-		     << REC_EWMA(t) << ",ratio=" 
-				 << RTT_RATIO(t)
 				 << "]";
 	return stream.str();
 }
@@ -118,6 +88,11 @@ string _atuple_str( ActionTuple t ) {
 	return stream.str();
 }
 
+void PointGrid::add_point( PointObj p )
+{
+  _points[p.first] = p.second;
+}
+
 string _point_str( PointObj p ) {
 	return _stuple_str(p.first) + " -> " + _atuple_str(p.second);
 }
@@ -130,7 +105,7 @@ string PointGrid::str() {
 	return ret;
 }
 
-void PointGrid::track ( double s, double r, double t ) {
+void PointGrid::track ( double s, double r, double t, double sr ) {
 	if (_track) {
 	//printf("%f %f %f\n", s, r ,t);
 		/*
@@ -144,6 +119,7 @@ void PointGrid::track ( double s, double r, double t ) {
 		_send_acc.add( s );
 		_rec_acc.add( r );
 		_rtt_acc.add( t );
+    _slow_rec_acc.add( sr );
 	}
 }
 
@@ -160,7 +136,8 @@ SignalTuple PointGrid::get_median_signal() {
 			*/
 			_send_acc.result( ),
 			_rec_acc.result( ),
-			_rtt_acc.result( )
+			_rtt_acc.result( ),
+      _slow_rec_acc.result( )
 	);
 }
 /*****************************************************************************/
@@ -175,10 +152,16 @@ LerpSender::LerpSender(PointGrid & grid)
      _the_window( INITIAL_WINDOW ),
      _intersend_time( 0 ),
      _flow_id( 0 ),
-     _largest_ack( -1 )
+     _largest_ack( -1 ),
+     _signal_list( )
 {
-	// now create the interp info list - only update it when adding an inner point
-	_interp_info_list = get_interp_info();
+  for ( auto it = _grid._points.begin(); it != _grid._points.end(); ++it ) {
+    ActionTuple a = it->second;
+    SignalTuple signal = it->first;
+    array< double, 4 > args = {SEND_EWMA( signal ), REC_EWMA( signal ), RTT_RATIO( signal ), SLOW_REC_EWMA( signal )};
+    _signal_list.push_back( make_pair( args, a ) );
+  }
+
 }
 
 void LerpSender::reset( const double & )
@@ -221,316 +204,56 @@ void LerpSender::update_actions( const Memory memory )
   double obs_send_ewma = (double)(memory.field( 0 ) );
   double obs_rec_ewma = (double)(memory.field( 1 ) );
   double obs_rtt_ratio = (double)(memory.field( 2 ) );
-	_grid.track( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio );
+  double obs_slow_rec_ewma = (double)(memory.field( 3 ) );
+	_grid.track( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio, obs_slow_rec_ewma );
 
-	ActionTuple a = interpolate( make_tuple( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio ) );
+	ActionTuple a = interpolate( make_tuple( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio, obs_slow_rec_ewma ) );
 
   _the_window = min( max( 0.0,  _the_window * CWND_MULT(a) + CWND_INC(a)  ), 1000000.0 );
   _intersend_time = MIN_SEND(a);
   if ( _grid._debug ) {
     if ( ( rand() % 100000 ) == 87 ) {
-      printf("Obs values: [%f, %f, %f]\n", obs_send_ewma, obs_rec_ewma, obs_rtt_ratio );
+      printf("Obs values: [%f, %f, %f, %f]\n", obs_send_ewma, obs_rec_ewma, obs_rtt_ratio, obs_slow_rec_ewma );
       printf("Window/intersend values: [%f, %f]\n", _the_window, _intersend_time );
     }
   }
 }
 
-void LerpSender::add_inner_point( const PointObj point, PointGrid & grid ) {
-	// Add inner point
-	grid._points[point.first] = point.second;
 
-	// Find enclosing box
-	double x0min, x0max, x1min, x1max, x2min, x2max;
-	double obs_send_ewma, obs_rec_ewma, obs_rtt_ratio;
-
-	tie (obs_send_ewma, obs_rec_ewma, obs_rtt_ratio) = point.first;
-
-  int i = 0;
-  while ( obs_send_ewma > _grid._signals[0][i] ) { i ++; }
-  x0min = _grid._signals[0][ max( i-1, 0 ) ];
-  x0max = _grid._signals[0][ min( i, int(_grid._signals[0].size() -  1) ) ];
-
-  i = 0;
-  while ( obs_rec_ewma > _grid._signals[1][i] ) { i ++; }
-  x1min = _grid._signals[1][ max( i-1, 0 ) ];
-  x1max = _grid._signals[1][ min( i, int(_grid._signals[1].size() - 1) ) ];
-
-  i = 0;
-  while ( obs_rtt_ratio > _grid._signals[2][i] ) { i ++; }
-  x2min = _grid._signals[2][ max( i-1, 0 ) ];
-  x2max = _grid._signals[2][ min( i, int(_grid._signals[2].size() - 1) ) ];
-
-	// Add all side points
-	InterpInfo interp;
-	for ( InterpInfo info: _interp_info_list ) {
-		if ( ( x0min == info.min_send_ewma ) && ( x0max == info.max_send_ewma ) && ( x1min == info.min_rec_ewma ) && ( x1max == info.max_rec_ewma ) &&  ( x2min == info.min_rtt_ratio ) && ( x2max == info.max_rtt_ratio ) ) {
-			interp = info;
-    }
-	}
-	for (double &x : vector<double>{x0min,SEND_EWMA(point.first),x0max}) {
-		for (double &y : vector<double>{x1min,REC_EWMA(point.first),x1max}) {
-			for (double &z : vector<double>{x2min,RTT_RATIO(point.first),x2max}) {
-				if ( ( x == SEND_EWMA(point.first ) ) || 
-						 ( y == REC_EWMA(point.first ) )  || 
-						 ( z == RTT_RATIO(point.first ) ) ) {
-					SignalTuple tmp = make_tuple(x,y,z);
-					grid._points[tmp] = interpolate_delaunay(x,y,z);
-					if (find( grid._signals[0].begin(), grid._signals[0].end(), x ) == grid._signals[0].end()) {
-						grid._signals[0].push_back( x );
-					}
-					if (find( grid._signals[1].begin(), grid._signals[1].end(), y ) == grid._signals[1].end()) {
-						grid._signals[1].push_back( y );
-					}
-					if (find( grid._signals[2].begin(), grid._signals[2].end(), z ) == grid._signals[2].end()) {
-						grid._signals[2].push_back( z );
-					}
-				}
-			}
-		}
-	}
-  // modify the mapping for the median itself
-  grid._points[point.first] = point.second;
-	for (int i=0; i<3; i++) {
-		sort(grid._signals[i].begin(), grid._signals[i].end());
-	}
-	// update the interp info the reflect the modified grid
-	_interp_info_list = get_interp_info();
-
-}
-
-vector< InterpInfo > LerpSender::get_interp_info( void )
-{
-	vector< InterpInfo > vec;
-
-  // create every possible pair of sends, recs, and ratios -> 0,1 1,2 ...
-  vector< pair< double, double > > sends;
-  vector< pair< double, double > > recs;
-  vector< pair< double, double > > ratios;
-  int num_signals = int( _grid._signals[0].size() );
-  for ( int i = 0; i < num_signals; i++ ) {
-    if ( i != num_signals - 1 ) {
-      sends.push_back( make_pair( _grid._signals[0][i], _grid._signals[0][i+1]));
-      recs.push_back( make_pair( _grid._signals[1][i], _grid._signals[1][i+1]));
-      ratios.push_back( make_pair( _grid._signals[2][i], _grid._signals[2][i+1]));
-    }
-  }
-				for ( pair< double, double > send_vals: sends ) {
-					for ( pair< double, double > rec_vals: recs ) {
-						for ( pair < double, double > ratio_vals: ratios ) {
-              double send_min = send_vals.first;
-              double send_max = send_vals.second;
-              double rec_min = rec_vals.first;
-              double rec_max = rec_vals.second;
-              double ratio_min = ratio_vals.first;
-              double ratio_max = ratio_vals.second;
-							InterpInfo info;
-							info.min_send_ewma = send_min;
-							info.max_send_ewma = send_max;
-							info.min_rec_ewma = rec_min;
-							info.max_rec_ewma = rec_max;
-							info.min_rtt_ratio = ratio_min;
-							info.max_rtt_ratio = ratio_max;
-
-							info.grid_sizes[0] = 2;
-							info.grid_sizes[1] = 2;
-							info.grid_sizes[2] = 2;
-
-							for (int i = 0; i < 8; i ++ ) {
-								double cur_send = info.min_send_ewma;
-								double cur_rec = info.min_rec_ewma;
-								double cur_ratio = info.min_rtt_ratio;
-							  if (i >= 4)  {
-									cur_send = info.max_send_ewma;
-								}
-								if ( (i == 2) || (i== 3) || (i == 6) || (i == 7) ) {
-									cur_rec = info.max_rec_ewma;
-								}
-								if ( (i == 1) || (i == 3) || (i == 5) || (i == 7) ) {
-									cur_ratio = info.max_rtt_ratio;
-								}
-								ActionTuple a = _grid._points[ make_tuple( cur_send, cur_rec, cur_ratio ) ];
-								info.window_incr_vals[i] = (CWND_INC( a ));
-								info.window_mult_vals[i] = ( CWND_MULT( a ));
-								info.intersend_vals[i] = ( MIN_SEND( a ));
-							}
-
-							vec.push_back( info );
-						}
-					}
-				}
-	return vec;
-}
-
-double LerpSender::interpolate_action( vector< double > actions, double x0_min_factor, double x1_min_factor, double x2_min_factor )
-{
-	double x0_max_factor = 1 - x0_min_factor;
-	double x1_max_factor = 1 - x1_min_factor;
-	double x2_max_factor = 1 - x2_min_factor;
-
-	double c00 = ( actions[0] )*x0_min_factor + ( actions[4] )*x0_max_factor;
-	double c01 = ( actions[1] )*x0_min_factor + ( actions[5] )*x0_max_factor;
-	double c10 = ( actions[2] )*x0_min_factor + ( actions[6] )*x0_max_factor;
-	double c11 = ( actions[3] )*x0_min_factor + ( actions[7] )*x0_max_factor;
-
-	double c0 = c00*x1_min_factor + c10*x1_max_factor;
-	double c1 = c01*x1_min_factor + c11*x1_max_factor;
-
-	double c = c0*( x2_min_factor ) + c1*( x2_max_factor );
-	return c;
-
-}
 ActionTuple LerpSender::interpolate( SignalTuple t ) {
 	double obs_send_ewma = SEND_EWMA(t);
 	double obs_rec_ewma = REC_EWMA(t);
 	double obs_rtt_ratio = RTT_RATIO(t);
-
-	double x0min, x0max, x1min, x1max, x2min, x2max;
-  int i = 0;
-
-  while ( obs_send_ewma >= _grid._signals[0][i] ) {
-    i ++;
-    if ( i == int( _grid._signals[0].size() - 1 ) ) { break; }
-  }
-  x0min = _grid._signals[0][ max( i-1, 0 ) ];
-  x0max = _grid._signals[0][ min( i, int(_grid._signals[0].size() -  1) ) ];
-
-  i = 0;
-  while ( obs_rec_ewma >= _grid._signals[1][i] ) {
-    i ++;
-    if ( i == int( _grid._signals[0].size() - 1 ) ) { break; }
-  }
-  x1min = _grid._signals[1][ max( i-1, 0 ) ];
-  x1max = _grid._signals[1][ min( i, int(_grid._signals[1].size() - 1) ) ];
-
-  i = 0;
-  while ( obs_rtt_ratio >= _grid._signals[2][i] ) {
-    i ++;
-    if ( i == int( _grid._signals[0].size() - 1 ) ) { break; }
-
-  }
-  x2min = _grid._signals[2][ max( i-1, 0 ) ];
-  x2max = _grid._signals[2][ min( i, int(_grid._signals[2].size() - 1) ) ];
-	InterpInfo interp;
-	for ( InterpInfo info: _interp_info_list ) {
-		if ( ( x0min == info.min_send_ewma ) && ( x0max == info.max_send_ewma ) && ( x1min == info.min_rec_ewma ) && ( x1max == info.max_rec_ewma ) &&  ( x2min == info.min_rtt_ratio ) && ( x2max == info.max_rtt_ratio ) ) {
-			interp = info;
-    }
-	}
-	return interpolate_delaunay( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio);
+  double slow_rec_ewma = SLOW_REC_EWMA(t);
+	return interpolate_delaunay( obs_send_ewma, obs_rec_ewma, obs_rtt_ratio, slow_rec_ewma);
 }
 
-void LerpSender::update_interp_info( void )
-{
-	_interp_info_list = get_interp_info();
-}
-// return an evenly spaced 1-d grid of doubles.
-vector<double> linspace(double first, double last, int len) {
-  vector<double> result(len);
-  double step = (last-first) / (len - 1);
-  for (int i=0; i<len; i++) { result[i] = first + i*step; }
-  return result;
-}
-
-void
-LerpSender::print_interp_info( InterpInfo info ) {
-  // prints an interp info
-  printf("----\n");
-  printf("Min and max for send_ewma, rec_ewma, rtt_ratio are [%f, %f], [%f, %f], [%f, %f]\n", info.min_send_ewma, info.max_send_ewma, info.min_rec_ewma, info.max_rec_ewma, info.min_rtt_ratio, info.max_rtt_ratio);
-  printf("Window incr vals: [%f, %f, %f, %f, %f, %f, %f, %f]\n", info.window_incr_vals[0], info.window_incr_vals[1], info.window_incr_vals[2], info.window_incr_vals[3], info.window_incr_vals[4], info.window_incr_vals[5], info.window_incr_vals[6], info.window_incr_vals[7]);
-  printf("Window mult vals: [%f, %f, %f, %f, %f, %f, %f, %f]\n", info.window_mult_vals[0], info.window_mult_vals[1], info.window_mult_vals[2], info.window_mult_vals[3], info.window_mult_vals[4], info.window_mult_vals[5], info.window_mult_vals[6], info.window_mult_vals[7]);
-  printf("Intersend vals: [%f, %f, %f, %f, %f, %f, %f, %f]\n", info.intersend_vals[0], info.intersend_vals[1], info.intersend_vals[2], info.intersend_vals[3], info.intersend_vals[4], info.intersend_vals[5], info.intersend_vals[6], info.intersend_vals[7]);
-  printf("Grid sizes: [%d, %d, %d]\n", info.grid_sizes[0], info.grid_sizes[1], info.grid_sizes[2]);
-  printf("----\n");
-}
-
-ActionTuple LerpSender::interpolate_delaunay( double s, double r, double t ) {
-  printf("Trying to interpolate %f, %f, %f\n", s, r, t);
-  Delaunay_incremental_interp_d incr_triang(3);
-  Delaunay_incremental_interp_d mult_triang(3);
-  Delaunay_incremental_interp_d send_triang(3);
-  for ( auto it = _grid._points.begin(); it != _grid._points.end(); ++it ) {
-    ActionTuple a = it->second;
-    SignalTuple signal = it->first;
-    printf("S is %s, A is %s\n", _atuple_str( a ).c_str(), _stuple_str( signal ).c_str() );
-    array< double, 3 > args = {SEND_EWMA( signal ), REC_EWMA( signal ), RTT_RATIO( signal )};
+ActionTuple LerpSender::interpolate_delaunay( double s, double r, double t, double sr ) {
+  printf("Trying to interpolate %f, %f, %f, %f\n", s, r, t, sr);
+  Delaunay_incremental_interp_d incr_triang(4);
+  Delaunay_incremental_interp_d mult_triang(4);
+  Delaunay_incremental_interp_d send_triang(4);
+  for ( auto it: _signal_list ) {
+    ActionTuple a = it.second;
     double window_incr = CWND_INC( a );
     double window_mult = CWND_MULT( a );
     double intersend = MIN_SEND( a );
+    array < double, 4 > args = it.first;
     incr_triang.insert( args.begin(), args.end(), window_incr );
     mult_triang.insert( args.begin(), args.end(), window_mult );
     send_triang.insert( args.begin(), args.end(), intersend );
-    printf("Was able to insert into the triangle\n");
   }
 
   // now interpolate each
-  array< double, 3 > interp_args = { s, r, t};
-  printf("Declared array\n");
+  array< double, 4 > interp_args = { s, r, t, sr };
+  printf("About to create triangulations\n");
   double interpolated_incr = incr_triang.interp( interp_args.begin(), interp_args.end() );
-  printf("Not able to interpolate fml\n");
   double interpolated_mult = mult_triang.interp( interp_args.begin(), interp_args.end() );
   double interpolated_send = send_triang.interp( interp_args.begin(), interp_args.end() );
+  printf("Finished interpolation -> %f, %f %f\n",  interpolated_incr, interpolated_mult, interpolated_send);
   return make_tuple( interpolated_incr, interpolated_mult, interpolated_send );
 }
 
 
-ActionTuple LerpSender::interpolate( double obs_send_ewma, double obs_rec_ewma, double obs_rtt_ratio ) {
-
-	double x0min, x0max, x1min, x1max, x2min, x2max;
-
-  int i = 0;
-  while ( obs_send_ewma > _grid._signals[0][i] ) { i ++; }
-  x0min = _grid._signals[0][ max( i-1, 0 ) ];
-  x0max = _grid._signals[0][ min( i, int(_grid._signals[0].size() -  1) ) ];
-
-  i = 0;
-  while ( obs_rec_ewma > _grid._signals[1][i] ) { i ++; }
-  x1min = _grid._signals[1][ max( i-1, 0 ) ];
-  x1max = _grid._signals[1][ min( i, int(_grid._signals[1].size() - 1) ) ];
-
-  i = 0;
-  while ( obs_rtt_ratio > _grid._signals[2][i] ) { i ++; }
-  x2min = _grid._signals[2][ max( i-1, 0 ) ];
-  x2max = _grid._signals[2][ min( i, int(_grid._signals[2].size() - 1) ) ];
-
-	/*
-	if (rand() % 1000000 == 5) {
-		printf("signal: %f %f %f || ", obs_send_ewma, obs_rec_ewma, obs_rtt_ratio );
-		printf("x0: %f,%f x1: %f,%f x2: %f,%f\n", x0min,x0max, x1min,x1max, x2min,x2max );
-	}
-	*/
-
-	double x0d = ( obs_send_ewma - x0min )/( x0max - obs_send_ewma );
-	double x1d = ( obs_rec_ewma - x1min )/ ( x1max - obs_rec_ewma );
-	double x2d = ( obs_rtt_ratio - x2min )/ (x2max - obs_rtt_ratio);
-	double x0_min_factor = ( obs_send_ewma == x0min ) ? 1 : ( obs_send_ewma == x0max ) ? 0 : ( 1 - x0d );
-	double x1_min_factor = ( obs_rec_ewma == x1min ) ? 1 : ( obs_rec_ewma == x1max ) ?  0 : ( 1 - x1d );
-	double x2_min_factor = ( obs_rtt_ratio == x2min ) ? 1 : ( obs_rtt_ratio == x2max ) ?  0 : ( 1 - x2d );
-
-  vector<ActionTuple> actions = {
-		_grid._points[make_tuple(x0min, x1min, x2min)],
-		_grid._points[make_tuple(x0min, x1min, x2max)],
-		_grid._points[make_tuple(x0min, x1max, x2min)],
-		_grid._points[make_tuple(x0min, x1max, x2max)],
-		_grid._points[make_tuple(x0max, x1min, x2min)],
-		_grid._points[make_tuple(x0max, x1min, x2max)],
-		_grid._points[make_tuple(x0max, x1max, x2min)],
-		_grid._points[make_tuple(x0max, x1max, x2max)],
-	};
-	vector< double > increments;
-	vector< double > multiples;
-	vector< double > intersends;
-
-	for ( int i = 0; i < 8; i ++ ) {
-		increments.emplace_back( CWND_INC( actions[i] ) );
-		multiples.emplace_back( CWND_MULT( actions[i]  ));
-		intersends.emplace_back( MIN_SEND( actions[i] ));
-	}
-
-	double inc = interpolate_action( increments, x0_min_factor, x1_min_factor, x2_min_factor );
-	double mult = interpolate_action( multiples, x0_min_factor, x1_min_factor, x2_min_factor );
-	double send = interpolate_action( intersends, x0_min_factor, x1_min_factor, x2_min_factor );
-	return make_tuple( inc, mult, send);
-
-}
 
 /*****************************************************************************/

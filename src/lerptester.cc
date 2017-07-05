@@ -27,6 +27,7 @@ int main( int argc, char *argv[] )
 	double rtt_ratio = 0;
 	double send_ewma = 0;
 	double rec_ewma = 0;
+  double slow_rec_ewma = 0;
 	string config_filename;
   bool interp_test_only = true;
   RemyBuffers::WhiskerTree tree;
@@ -40,6 +41,8 @@ int main( int argc, char *argv[] )
 			send_ewma = atof( arg.substr( 5 ).c_str() );
 		} else if ( arg.substr( 0, 4 ) == "rec=" ) {
 			rec_ewma = atof( arg.substr( 4 ).c_str() );
+		} else if ( arg.substr( 0, 9 ) == "slow_rec=" ) {
+      slow_rec_ewma = atof( arg.substr( 9 ).c_str() );
     } else if ( arg.substr(0, 3 ) == "cf=" ) {
       config_filename = string( arg.substr( 3 ) );
       int cfd = open( config_filename.c_str(), O_RDONLY );
@@ -90,12 +93,12 @@ int main( int argc, char *argv[] )
   if ( interp_test_only) {
 
 	// replace 0,0,0 and make a sender inc=54,mult=0.82,intr=0.35
-	grid._points[make_tuple(0,0,0)] = make_tuple( 54, .82, .35);
+	grid._points[make_tuple(0,0,0,0)] = make_tuple( 54, .82, .35);
 	//Evaluator< WhiskerTree > eval( config_range );
   LerpSender sender( grid );
 	//printf("Grid is %s\n", grid.str().c_str() );
 
-	SignalTuple signal = make_tuple( send_ewma, rec_ewma, rtt_ratio );
+	SignalTuple signal = make_tuple( send_ewma, rec_ewma, rtt_ratio, slow_rec_ewma );
 	ActionTuple a = sender.interpolate( signal );
 	printf("Maps %s -> %s\n", _stuple_str( signal ).c_str(), _atuple_str( a ).c_str() );
 

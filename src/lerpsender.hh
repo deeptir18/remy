@@ -22,10 +22,9 @@ using namespace std;
 #define MAX_SEND_EWMA 300
 #define MAX_REC_EWMA 300
 #define MAX_RTT_RATIO 100
-
-#define NUM_SIGNALS 3
-typedef tuple<double,double,double> SignalTuple;
-typedef tuple<double,double,double,double> NewSignalTuple;
+#define MAX_SLOW_REC_EWMA 100
+#define NUM_SIGNALS 4
+typedef tuple<double,double,double,double> SignalTuple;
 
 #define SEND_EWMA(s) get <0>(s)
 #define REC_EWMA(s)  get <1>(s)
@@ -40,20 +39,7 @@ typedef pair<SignalTuple,ActionTuple> PointObj;
 #define DEFAULT_INCR 1
 #define DEFAULT_MULT 1
 #define DEFAULT_SEND 3
-struct InterpInfo {
-  InterpInfo() :  window_incr_vals( 8 ), window_mult_vals( 8 ), intersend_vals( 8) {}
-	double min_send_ewma;
-	double max_send_ewma;
-	double min_rec_ewma;
-	double max_rec_ewma;
-	double min_rtt_ratio;
-	double max_rtt_ratio;
-	array<int, 3> grid_sizes;
-	std::vector< double > window_incr_vals;
-	std::vector< double > window_mult_vals;
-	std::vector< double > intersend_vals;
-};
-string _stuple_str( NewSignalTuple t );
+#define DEFAULT_SLOWR 4
 string _stuple_str( SignalTuple t );
 string _atuple_str( ActionTuple t );
 string _point_str( PointObj p );
@@ -64,7 +50,8 @@ struct HashAction{
 			hash<double>()(get<1>(a)) ^
 			hash<double>()(get<2>(a))
 		);
-	}
+
+   }
 };
 
 struct HashSignal{
@@ -72,7 +59,8 @@ struct HashSignal{
 		return (
 			hash<double>()(get<0>(s)) ^ 
 			hash<double>()(get<1>(s)) ^
-			hash<double>()(get<2>(s))
+			hash<double>()(get<2>(s)) ^
+      hash<double>()(get<3>(s))
 		);
 	}
 };
@@ -81,7 +69,8 @@ struct EqualSignal {
 		return (
 						 (get<0>(s) == get<0>(t)) && 
 						 (get<1>(s) == get<1>(t)) && 
-						 (get<2>(s) == get<2>(t))
+						 (get<2>(s) == get<2>(t)) &&
+             (get<3>(s) == get<3>(t))
 				   );
   }
 };
@@ -92,7 +81,8 @@ struct CompareSignals {
 		return (
 						 (get<0>(s) < get<0>(t)) && 
 						 (get<1>(s) < get<1>(t)) && 
-						 (get<2>(s) < get<2>(t))
+						 (get<2>(s) < get<2>(t)) &&
+						 (get<3>(s) < get<3>(t))
 				   );
 	}
 };
@@ -108,12 +98,12 @@ private:
 	bool _track;
 	// mutable vector< p2_t > _acc;
 	// mutable vector< acc_median_t > _acc;
-	p2_t _send_acc, _rec_acc, _rtt_acc;
+	p2_t _send_acc, _rec_acc, _rtt_acc, _slow_rec_acc;
 public:
 	// can access these two directly for now
   bool _debug;
 	SignalActionMap _points; // map of signal to action
-  vector< vector< double > > _signals; // list of values for each signal
+  void add_point( PointObj p );
 	PointGrid( bool track = false );
 	PointGrid( PointGrid & other, bool track );
 
@@ -123,7 +113,7 @@ public:
 
   string str();
 
-  void track( double s, double r, double t );
+  void track( double s, double r, double t, double sr );
   SignalTuple get_median_signal ();
 
 };
@@ -133,19 +123,15 @@ class LerpSender
 private:
 	PointGrid & _grid;
   Memory _memory;
-	std::vector< InterpInfo > _interp_info_list; // everywhere the grid is modified, remake the interp info list
   unsigned int _packets_sent, _packets_received;
   double _last_send_time;
   /* _the_window is the congestion window */
   double _the_window;
   double _intersend_time;
   unsigned int _flow_id;
-	std::vector< InterpInfo > get_interp_info( void );
   /* Largest ACK so far */
   int _largest_ack;
-	string interp_str();
-	double interpolate_action( vector< double > actions, double x0_min_factor, double x1_min_factor, double x2_min_factor );
-  void print_interp_info( InterpInfo info );
+  vector< pair < array< double, 4 >, ActionTuple > > _signal_list;
 
 public:
   LerpSender( PointGrid & grid );
@@ -153,14 +139,12 @@ public:
   void packets_received( const std::vector< Packet > & packets );
   double next_event_time( const double & tickno ) const;
   void update_actions( const Memory memory );
-	void update_interp_info( void );
   template <class NextHop>
   void send( const unsigned int id, NextHop & next, const double & tickno );
   LerpSender & operator=( const LerpSender & ) { assert( false ); return *this; }
 
 	void add_inner_point ( const PointObj point, PointGrid & grid );
-	ActionTuple interpolate ( double s, double r, double t );
-  ActionTuple interpolate_delaunay( double s, double r, double t );
+  ActionTuple interpolate_delaunay( double s, double r, double t, double sr );
 	ActionTuple interpolate ( SignalTuple t );
 
 };

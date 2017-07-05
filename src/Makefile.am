@@ -13,10 +13,10 @@ common_source = delay.hh evaluator.cc evaluator.hh                 \
 	receiver.cc receiver.hh sendergang.cc sendergang.hh            \
 	senderdatapoint.hh                                             \
 	sendergangofgangs.cc sendergangofgangs.hh                  \
-	utility.hh whisker.cc whisker.hh whiskertree.cc whiskertree.hh \
+	utility.hh whisker.cc whisker.hh whiskertree.cc whiskertree.hh delaunay_d_interp.h \
 	poly.hh                                                 \
 	aimd-templates.cc aimd.cc aimd.hh polysender-templates.cc polysender.cc polysender.hh                              \
-	lerpsender-templates.cc lerpsender.cc lerpsender.hh linterp.h p2.cc p2.h delaunay_d_interp.h\
+	lerpsender-templates.cc lerpsender.cc lerpsender.hh linterp.h p2.cc p2.h\
 	configrange.hh configrange.cc                              \
 	simulationresults.hh simulationresults.cc                      \
     action.hh fin.hh fin.cc fintree.cc fintree.hh  	               \
