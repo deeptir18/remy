@@ -14,7 +14,7 @@
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/accumulators/statistics/median.hpp> 
-
+#include "delaunay_d_interp.h"
 #include "p2.h"
 
 using namespace std;
@@ -132,6 +132,7 @@ private:
   /* Largest ACK so far */
   int _largest_ack;
   vector< pair < array< double, 4 >, ActionTuple > > _signal_list;
+  Delaunay_incremental_interp_d incr_triang();
 
 public:
   LerpSender( PointGrid & grid );

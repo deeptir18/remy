@@ -6,7 +6,6 @@
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/accumulators/statistics/median.hpp> 
-#include "delaunay_d_interp.h"
 #include <stdlib.h>
 #include "p2.h"
 #include <stdio.h>
