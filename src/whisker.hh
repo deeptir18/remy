@@ -29,6 +29,9 @@ public:
 
   std::vector< Whisker > next_generation( bool optimize_window_increment, bool optimize_window_multiple, bool optimize_intersend, bool wide ) const;
 
+  std::vector< Whisker > next_in_direction( double optimize_window_increment, double optimize_window_multiple, double optimize_intersend ) const;
+
+  void increase_generation( void );
   std::string str( const unsigned int total=1 ) const;
   
   RemyBuffers::Whisker DNA( void ) const;

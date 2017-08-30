@@ -43,6 +43,36 @@ RemyBuffers::Whisker Whisker::DNA( void ) const
   return ret;
 }
 
+vector< Whisker > Whisker::next_in_direction( double optimize_window_increment, double optimize_window_multiple, double optimize_intersend ) const
+{
+  vector< Whisker > ret;
+  // maybe later or before -> can not only use min change (?)
+  double window_increment_change = get_optimizer().window_increment.min_change * optimize_window_increment;
+  double window_multiple_change = get_optimizer().window_multiple.min_change * optimize_window_multiple;
+  double intersend_change = get_optimizer().intersend.min_change * optimize_intersend;
+
+  // return a vector with all these combinations of changes
+  for ( double incr = 0; incr <= window_increment_change; incr += window_increment_change ) {
+    for ( double mult = 0; mult <= window_multiple_change; mult += window_multiple_change ) {
+      for ( double send = 0; send <= intersend_change; send += intersend_change ) {
+        Whisker new_whisker { *this };
+	        new_whisker._window_increment += incr;
+	        new_whisker._window_multiple += mult;
+	        new_whisker._intersend += send;
+          if (!( ( incr == 0 ) && ( mult == 0 ) && ( send == 0 ) )) {
+            ret.emplace_back( new_whisker );
+          }
+      }
+    }
+  }
+  return ret;
+}
+
+void Whisker::increase_generation( void )
+{
+  _generation++;
+}
+
 vector< Whisker > Whisker::next_generation( bool optimize_window_increment, bool optimize_window_multiple, bool optimize_intersend, bool wide ) const
 {
   vector< Whisker> ret;

@@ -3,9 +3,9 @@
 
 #include "breeder.hh"
 #include <chrono>
-#define INTERSEND 0
-#define WINDOW_INCR 1
-#define WINDOW_MULT 2
+#define WINDOW_INCR 0
+#define WINDOW_MULT 1
+#define INTERSEND 2
 struct WhiskerImproverOptions
 {
   bool optimize_window_increment = true;
@@ -105,17 +105,14 @@ private:
 
   double  improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree, double score_to_beat);
 
-  double improve_whisker_wide_range( Whisker & whisker_to_improve, WhiskerTree & tree, double score_to_beat );
 
   double evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval);
 
-  void evaluate_initial_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval, vector< vector< double > > &replacement_values, Direction &dir);
+  double evaluate_initial_whisker_list( WhiskerTree &tree,  vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval, double score_to_beat );
 
-  double evaluate_and_check( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval, vector< vector< double > > &replacement_values);
-
+  double get_score_to_beat( double current_score, Whisker& whisker_to_improve, vector< pair < const Whisker&, pair< bool, double > > > scores);
   std::unordered_map< Direction, vector< Whisker >, boost:: hash< Direction > > get_direction_bins ( Whisker & whisker_to_improve );
 
- bool evaluate_whisker( Whisker& whisker, vector< vector< double > > &replacement_values );
 
 public:
     // checks if the whisker has a bad value
