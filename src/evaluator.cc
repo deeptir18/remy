@@ -118,12 +118,12 @@ Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score( WhiskerTree &
       network1.run_simulation( ticks_to_run );
       the_outcome.score += network1.senders().utility();
       the_outcome.throughputs_delays.emplace_back( x, network1.senders().throughputs_delays() );
-      std::cout << "Score from network " << x.str().c_str() << ": " << the_outcome.score << std::endl;
+      //std::cout << "Score from network " << x.str().c_str() << ": " << the_outcome.score << std::endl;
     } else {
       network2.run_simulation( ticks_to_run);
       the_outcome.score += network2.senders().utility();
       the_outcome.throughputs_delays.emplace_back( x, network2.senders().throughputs_delays() );
-      std::cout << "Score from network " << x.str().c_str() << ": " << the_outcome.score << std::endl;
+      //std::cout << "Score from network " << x.str().c_str() << ": " << the_outcome.score << std::endl;
     }
     
   }
