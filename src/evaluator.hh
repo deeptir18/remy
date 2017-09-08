@@ -5,6 +5,7 @@
 #include <vector>
 #include <future>
 #include "random.hh"
+#include "aimd.hh"
 #include "whiskertree.hh"
 #include "fintree.hh"
 #include "network.hh"
