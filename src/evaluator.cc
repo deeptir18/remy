@@ -15,8 +15,8 @@ Evaluator< T >::Evaluator( const ConfigRange & range )
     _configs()
 {
   //double tcp_senders_arr[5] = { 0, 1, 5, 10, 100 };
-  double tcp_senders_arr[1] = {100};
-  double bdp_arr[4] = { .5, 1, 2, 4 };
+  double tcp_senders_arr[5] = {0,1,5,10,100};
+  double bdp_arr[4] = { .5, 1, 4 };
   int count = 0;
   // add configs from every point in the cube of configs
   for (double link_ppt = range.link_ppt.low; link_ppt <= range.link_ppt.high; link_ppt += range.link_ppt.incr) {
@@ -30,7 +30,12 @@ Evaluator< T >::Evaluator( const ConfigRange & range )
                 vector< double > buffer_sizes;
                 double one_bdp = link_ppt * rtt;
                 for ( double bdp: bdp_arr ) {
+                  double size = one_bdp * bdp;
+                  if ( size == 0 ) {
+                    continue;
+                  }
                   buffer_sizes.emplace_back( one_bdp * bdp );
+
                 }
                 for ( double buffer_size : buffer_sizes ) {
                   _configs.push_back( NetConfig().set_link_ppt( link_ppt ).set_delay( rtt ).set_num_senders( senders ).set_on_duration( on ).set_off_duration(off).set_buffer_size( buffer_size ).set_stochastic_loss_rate( loss_rate ).set_num_tcp_senders( num_tcp_senders ) );
