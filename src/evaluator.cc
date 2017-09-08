@@ -1,10 +1,12 @@
 #include <fcntl.h>
 
+#include <iostream>
 #include "configrange.hh"
 #include "evaluator.hh"
 #include "network.cc"
 #include "rat-templates.cc"
 #include "fish-templates.cc"
+#include "aimd-templates.cc"
 
 template <typename T>
 Evaluator< T >::Evaluator( const ConfigRange & range )
@@ -12,18 +14,29 @@ Evaluator< T >::Evaluator( const ConfigRange & range )
     _tick_count( range.simulation_ticks ),
     _configs()
 {
+  double tcp_senders_arr[5] = { 0, 1, 5, 10, 100 };
+  double bdp_arr[4] = { .5, 1, 2, 4 };
+  int count = 0;
   // add configs from every point in the cube of configs
   for (double link_ppt = range.link_ppt.low; link_ppt <= range.link_ppt.high; link_ppt += range.link_ppt.incr) {
-    for (double rtt = range.rtt.high; rtt <= range.rtt.high; rtt += range.rtt.incr) {
+    for (double rtt = range.rtt.low; rtt <= range.rtt.high; rtt += range.rtt.incr) {
       for (unsigned int senders = range.num_senders.low; senders <= range.num_senders.high; senders += range.num_senders.incr) {
         for (double on = range.mean_on_duration.low; on <= range.mean_on_duration.high; on += range.mean_on_duration.incr) {
           for (double off = range.mean_off_duration.low; off <= range.mean_off_duration.high; off += range.mean_off_duration.incr) {
-            for ( double buffer_size = range.buffer_size.low; buffer_size <= range.buffer_size.high; buffer_size += range.buffer_size.incr) {
+            for ( double num_tcp_senders: tcp_senders_arr ) {
               for ( double loss_rate = range.stochastic_loss_rate.low; loss_rate <= range.stochastic_loss_rate.high; loss_rate += range.stochastic_loss_rate.incr) {
-                _configs.push_back( NetConfig().set_link_ppt( link_ppt ).set_delay( rtt ).set_num_senders( senders ).set_on_duration( on ).set_off_duration(off).set_buffer_size( buffer_size ).set_stochastic_loss_rate( loss_rate ) );
+                // now iterate over .5, 1 2 4 BDP
+                vector< double > buffer_sizes;
+                double one_bdp = link_ppt * rtt;
+                for ( double bdp: bdp_arr ) {
+                  buffer_sizes.emplace_back( one_bdp * bdp );
+                }
+                for ( double buffer_size : buffer_sizes ) {
+                  _configs.push_back( NetConfig().set_link_ppt( link_ppt ).set_delay( rtt ).set_num_senders( senders ).set_on_duration( on ).set_off_duration(off).set_buffer_size( buffer_size ).set_stochastic_loss_rate( loss_rate ).set_num_tcp_senders( num_tcp_senders ) );
+                  std::cout << "Config # " << count << ": " << _configs.at(_configs.size() - 1).str().c_str() << std::endl;
+                }
                 if ( range.stochastic_loss_rate.isOne() ) { break; }
               }
-              if ( range.buffer_size.isOne() ) { break; }
             }
             if ( range.mean_off_duration.isOne() ) { break; }
           }
@@ -35,6 +48,8 @@ Evaluator< T >::Evaluator( const ConfigRange & range )
     }
     if ( range.link_ppt.isOne() ) { break; }
   }
+
+  std::cout << "Num configs is: " << _configs.size() << std::endl;
 }
 
 template <typename T>
@@ -91,10 +106,18 @@ Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score( WhiskerTree &
     /* run once */
     Network<SenderGang<Rat, TimeSwitchedSender<Rat>>,
       SenderGang<Rat, TimeSwitchedSender<Rat>>> network1( Rat( run_whiskers, trace ), run_prng, x );
-    network1.run_simulation( ticks_to_run );
+    Network<SenderGang<Rat, TimeSwitchedSender<Rat>>,
+      SenderGang<Aimd, TimeSwitchedSender<Aimd>>> network2( Rat( run_whiskers, trace ), Aimd(), run_prng, x);
+    if( x.num_tcp_senders == 0 ) {
+      network1.run_simulation( ticks_to_run );
+      the_outcome.score += network1.senders().utility();
+      the_outcome.throughputs_delays.emplace_back( x, network1.senders().throughputs_delays() );
+    } else {
+      network2.run_simulation( ticks_to_run);
+      the_outcome.score += network2.senders().utility();
+      the_outcome.throughputs_delays.emplace_back( x, network2.senders().throughputs_delays() );
+    }
     
-    the_outcome.score += network1.senders().utility();
-    the_outcome.throughputs_delays.emplace_back( x, network1.senders().throughputs_delays() );
   }
 
   the_outcome.used_actions = run_whiskers;
