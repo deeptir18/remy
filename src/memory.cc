@@ -27,6 +27,7 @@ void Memory::packets_received( const vector< Packet > & packets, const unsigned 
       _last_tick_sent = x.tick_sent;
       _last_tick_received = x.tick_received;
       _min_rtt = rtt;
+      _srtt = rtt;
     } else {
       _rec_send_ewma = (1 - alpha) * _rec_send_ewma + alpha * (x.tick_sent - _last_tick_sent);
       _rec_rec_ewma = (1 - alpha) * _rec_rec_ewma + alpha * (x.tick_received - _last_tick_received);
@@ -35,7 +36,7 @@ void Memory::packets_received( const vector< Packet > & packets, const unsigned 
 
       _last_tick_sent = x.tick_sent;
       _last_tick_received = x.tick_received;
-
+      _srtt = ( 1 - alpha ) * _srtt + alpha * rtt;
       _min_rtt = min( _min_rtt, rtt );
       _rtt_ratio = double( rtt ) / double( _min_rtt );
       assert( _rtt_ratio >= 1.0 );
@@ -49,7 +50,7 @@ void Memory::packets_received( const vector< Packet > & packets, const unsigned 
 string Memory::str( void ) const
 {
   char tmp[ 256 ];
-  snprintf( tmp, 256, "sewma=%f, rewma=%f, rttr=%f, slowrewma=%f, rttd=%f, qdelay=%f", _rec_send_ewma, _rec_rec_ewma, _rtt_ratio, _slow_rec_rec_ewma, _rtt_diff, _queueing_delay );
+  snprintf( tmp, 256, "sewma=%f, rewma=%f, rttr=%f, slowrewma=%f, rttd=%f, qdelay=%f, sendrecratio=%f", _rec_send_ewma, _rec_rec_ewma, _rtt_ratio, _slow_rec_rec_ewma, _rtt_diff, _queueing_delay, _send_rec_ratio );
   return tmp;
 }
 
@@ -96,6 +97,7 @@ RemyBuffers::Memory Memory::DNA( void ) const
   ret.set_slow_rec_rec_ewma( _slow_rec_rec_ewma );
   ret.set_rtt_diff( _rtt_diff );
   ret.set_queueing_delay( _queueing_delay );
+  ret.set_send_rec_ratio( _send_rec_ratio );
   return ret;
 }
 
@@ -113,7 +115,9 @@ Memory::Memory( const bool is_lower_limit, const RemyBuffers::Memory & dna )
     _send_rec_ratio( get_val_or_default( dna, send_rec_ratio, is_lower_limit ) ),
     _last_tick_sent( 0 ),
     _last_tick_received( 0 ),
-    _min_rtt( 0 )
+    _min_rtt( 0 ),
+    _srtt( 0 )
+
 {
 }
 

@@ -23,6 +23,7 @@ private:
   double _last_tick_sent;
   double _last_tick_received;
   double _min_rtt;
+  double _srtt; // for use in calculating the intersend through the window
 
 public:
   Memory( const std::vector< DataType > & s_data )
@@ -35,7 +36,8 @@ public:
       _send_rec_ratio( s_data.at(6) ),
       _last_tick_sent( 0 ),
       _last_tick_received( 0 ),
-      _min_rtt( 0 )
+      _min_rtt( 0 ),
+      _srtt( 0 )
   {}
 
   Memory()
@@ -48,10 +50,11 @@ public:
       _send_rec_ratio( 0 ),
       _last_tick_sent( 0 ),
       _last_tick_received( 0 ),
-      _min_rtt( 0 )
+      _min_rtt( 0 ),
+      _srtt( 0 )
   {}
 
-  void reset( void ) { _rec_send_ewma = _rec_rec_ewma = _rtt_ratio = _slow_rec_rec_ewma = _rtt_diff = _queueing_delay = _last_tick_sent = _last_tick_received = _min_rtt = _send_rec_ratio = 0; }
+  void reset( void ) { _rec_send_ewma = _rec_rec_ewma = _rtt_ratio = _slow_rec_rec_ewma = _rtt_diff = _queueing_delay = _last_tick_sent = _last_tick_received = _min_rtt = _send_rec_ratio = _srtt = 0; }
 
   static const unsigned int datasize = 6;
 
@@ -61,6 +64,7 @@ public:
   void packet_sent( const Packet & packet __attribute((unused)) ) {}
   void packets_received( const std::vector< Packet > & packets, const unsigned int flow_id, const int largest_ack );
   void advance_to( const unsigned int tickno __attribute((unused)) ) {}
+  double srtt( void ) const { return _srtt; }
 
   std::string str( void ) const;
   std::string str( unsigned int num ) const;
