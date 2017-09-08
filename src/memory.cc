@@ -18,10 +18,18 @@ void Memory::packets_received( const vector< Packet > & packets, const unsigned 
       continue;
     }
 
-    const double rtt = x.tick_received - x.tick_sent;
+    double rtt = x.tick_received - x.tick_sent;
     int pkt_outstanding = 1;
     if ( x.seq_num > largest_ack ) {
       pkt_outstanding = x.seq_num - largest_ack;
+    }
+    if ( pkt_outstanding > 1 ) {
+      // add srtt, scaled by number of outstanding packets, to the rtt
+      double penalty = _srtt;
+      if ( _last_tick_sent == 0 || _last_tick_received == 0 ) {
+        penalty = rtt;
+      }
+      rtt += penalty * (pkt_outstanding - 1);
     }
     if ( _last_tick_sent == 0 || _last_tick_received == 0 ) {
       _last_tick_sent = x.tick_sent;

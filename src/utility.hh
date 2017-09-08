@@ -5,24 +5,30 @@
 #include <cassert>
 #include <climits>
 #include "simulationresults.pb.h"
-
+static const double alpha = 1.0/8.0;
 class Utility
 {
 private:
   double _tick_share_sending;
   unsigned int _packets_received;
   double _total_delay;
+  double _last_seqnum;
 
 public:
-  Utility( void ) : _tick_share_sending( 0 ), _packets_received( 0 ), _total_delay( 0 ) {}
+  Utility( void ) : _tick_share_sending( 0 ), _packets_received( 0 ), _total_delay( 0 ), _last_seqnum( - 1 ) {}
 
   void sending_duration( const double & duration, const unsigned int num_sending ) { _tick_share_sending += duration / double( num_sending ); }
   void packets_received( const std::vector< Packet > & packets ) {
     _packets_received += packets.size();
-
+    // maintain an srtt estimate
+    double srtt = 0;
     for ( auto &x : packets ) {
       assert( x.tick_received >= x.tick_sent );
-      _total_delay += x.tick_received - x.tick_sent;
+      double rtt = x.tick_received - x.tick_sent;
+      srtt = ( srtt == 0 ) ? rtt : ( 1 - alpha ) * srtt + alpha * rtt; // maintain smoothed rtt estimate
+      double pkt_outstanding = ( x.seq_num > _last_seqnum ) ? ( x.seq_num - _last_seqnum) : 1; // how many packets lost?
+      _last_seqnum = x.seq_num; // assuming no reordering
+      _total_delay += ( rtt ) + srtt * ( pkt_outstanding - 1 ); // add additional srtt if lost
     }
   }
 
