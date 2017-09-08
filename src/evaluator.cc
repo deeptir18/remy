@@ -14,7 +14,8 @@ Evaluator< T >::Evaluator( const ConfigRange & range )
     _tick_count( range.simulation_ticks ),
     _configs()
 {
-  double tcp_senders_arr[5] = { 0, 1, 5, 10, 100 };
+  //double tcp_senders_arr[5] = { 0, 1, 5, 10, 100 };
+  double tcp_senders_arr[1] = {100};
   double bdp_arr[4] = { .5, 1, 2, 4 };
   int count = 0;
   // add configs from every point in the cube of configs
@@ -112,12 +113,12 @@ Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score( WhiskerTree &
       network1.run_simulation( ticks_to_run );
       the_outcome.score += network1.senders().utility();
       the_outcome.throughputs_delays.emplace_back( x, network1.senders().throughputs_delays() );
-      //std::cout << "Score from network " << x.str().c_str() << ": " << the_outcome.score << std::endl;
+      std::cout << "Score from network " << x.str().c_str() << ": " << the_outcome.score << std::endl;
     } else {
       network2.run_simulation( ticks_to_run);
       the_outcome.score += network2.senders().utility();
       the_outcome.throughputs_delays.emplace_back( x, network2.senders().throughputs_delays() );
-      //std::cout << "Score from network " << x.str().c_str() << ": " << the_outcome.score << std::endl;
+      std::cout << "Score from network " << x.str().c_str() << ": " << the_outcome.score << std::endl;
     }
     
   }
