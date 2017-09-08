@@ -25,7 +25,8 @@ public:
     for ( auto &x : packets ) {
       assert( x.tick_received >= x.tick_sent );
       double rtt = x.tick_received - x.tick_sent;
-      srtt = ( srtt == 0 ) ? rtt : ( 1 - alpha ) * srtt + alpha * rtt; // maintain smoothed rtt estimate
+      double unpenalized_rtt = rtt;
+      srtt = ( srtt == 0 ) ? rtt : ( 1 - alpha ) * srtt + alpha * unpenalized_rtt; // maintain smoothed rtt estimate
       double pkt_outstanding = ( x.seq_num > _last_seqnum ) ? ( x.seq_num - _last_seqnum) : 1; // how many packets lost?
       _last_seqnum = x.seq_num; // assuming no reordering
       _total_delay += ( rtt ) + srtt * ( pkt_outstanding - 1 ); // add additional srtt if lost

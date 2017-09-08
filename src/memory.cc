@@ -1,7 +1,7 @@
 #include <boost/functional/hash.hpp>
 #include <vector>
 #include <cassert>
-
+#include <iostream>
 #include "memory.hh"
 
 using namespace std;
@@ -19,6 +19,7 @@ void Memory::packets_received( const vector< Packet > & packets, const unsigned 
     }
 
     double rtt = x.tick_received - x.tick_sent;
+    double unpenalized_rtt = x.tick_received - x.tick_sent;
     int pkt_outstanding = 1;
     if ( x.seq_num > largest_ack ) {
       pkt_outstanding = x.seq_num - largest_ack;
@@ -29,7 +30,11 @@ void Memory::packets_received( const vector< Packet > & packets, const unsigned 
       if ( _last_tick_sent == 0 || _last_tick_received == 0 ) {
         penalty = rtt;
       }
-      rtt += penalty * (pkt_outstanding - 1);
+      rtt += penalty * double(pkt_outstanding - 1);
+      /*if ( pkt_outstanding > 1 ) {
+        cout << "Lost packets: " << ( pkt_outstanding - 1 ) << ", penalty: " << penalty << ", srtt: " << _srtt << endl;
+        cout << "RTT: " << rtt << ", min rtt: " << _min_rtt << endl;
+      }*/
     }
     if ( _last_tick_sent == 0 || _last_tick_received == 0 ) {
       _last_tick_sent = x.tick_sent;
@@ -44,7 +49,7 @@ void Memory::packets_received( const vector< Packet > & packets, const unsigned 
 
       _last_tick_sent = x.tick_sent;
       _last_tick_received = x.tick_received;
-      _srtt = ( 1 - alpha ) * _srtt + alpha * rtt;
+      _srtt = ( 1 - alpha ) * _srtt + alpha * unpenalized_rtt;
       _min_rtt = min( _min_rtt, rtt );
       _rtt_ratio = double( rtt ) / double( _min_rtt );
       assert( _rtt_ratio >= 1.0 );
