@@ -28,7 +28,7 @@ private:
 
 public:
   MemoryRange( const Memory & s_lower, const Memory & s_upper, 
-    std::vector< Axis > s_active = { RemyBuffers::MemoryRange::SEND_EWMA, RemyBuffers::MemoryRange::REC_EWMA, RemyBuffers::MemoryRange::RTT_RATIO, RemyBuffers::MemoryRange::SLOW_REC_EWMA } )
+    std::vector< Axis > s_active = { RemyBuffers::MemoryRange::RTT_RATIO, RemyBuffers::MemoryRange::SEND_REC_RATIO } )
     : _lower( s_lower ), _upper( s_upper ), _active_axis( s_active ), _acc( Memory::datasize ), _count( 0 )
   {}
 
