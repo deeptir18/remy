@@ -42,6 +42,7 @@ int main( int argc, char *argv[] )
   WhiskerImproverOptions whisker_options;
   RemyBuffers::ConfigRange input_config;
   string config_filename;
+  volatile unsigned int run = 0;
 
   for ( int i = 1; i < argc; i++ ) {
     string arg( argv[ i ] );
@@ -49,20 +50,25 @@ int main( int argc, char *argv[] )
       string filename( arg.substr( 3 ) );
       int fd = open( filename.c_str(), O_RDONLY );
       if ( fd < 0 ) {
-	perror( "open" );
-	exit( 1 );
+				perror( "open" );
+				exit( 1 );
       }
 
       RemyBuffers::WhiskerTree tree;
       if ( !tree.ParseFromFileDescriptor( fd ) ) {
-	fprintf( stderr, "Could not parse %s.\n", filename.c_str() );
-	exit( 1 );
+				fprintf( stderr, "Could not parse %s.\n", filename.c_str() );
+				exit( 1 );
       }
       whiskers = WhiskerTree( tree );
 
+			const char *pd = strrchr(filename.c_str(),'.');
+			run = atoi(pd+1);
+			printf("Input protobuf from run #%d\n", run);
+			run++;
+
       if ( close( fd ) < 0 ) {
-	perror( "close" );
-	exit( 1 );
+				perror( "close" );
+				exit( 1 );
       }
 
     } else if ( arg.substr( 0, 3 ) == "of=" ) {
@@ -113,8 +119,6 @@ int main( int argc, char *argv[] )
 
   RatBreeder breeder( options, whisker_options );
 
-  volatile unsigned int run = 0;
-
   printf( "#######################\n" );
   printf( "Evaluator simulations will run for %d ticks\n",
     options.config_range.simulation_ticks );
@@ -143,17 +147,20 @@ int main( int argc, char *argv[] )
     printf( "Not saving output. Use the of=FILENAME argument to save the results.\n" );
   }
 
-    volatile bool keep_going = true;
-    while ( keep_going ) {
-    Evaluator< WhiskerTree >::Outcome outcome;
-    if (setjmp(flush_whisker_and_quit) == 0) { // real return
-      already_handling_signal = false;
-      outcome = breeder.improve( whiskers );
-      already_handling_signal = true;
-      printf( "run = %u, score = %f\n", run, outcome.score );
-    } else {
-      printf("Returned to main loop from signal handler.\n");
-      keep_going = false;
+	printf("Registering signal handler.\n");
+	signal(SIGINT, handle_sigint);
+
+	volatile bool keep_going = true;
+	while ( keep_going ) {
+		Evaluator< WhiskerTree >::Outcome outcome;
+		if (setjmp(flush_whisker_and_quit) == 0) { // real return
+			already_handling_signal = false;
+			outcome = breeder.improve( whiskers );
+			already_handling_signal = true;
+			printf( "run = %u, score = %f\n", run, outcome.score );
+		} else {
+			printf("Returned to main loop from signal handler.\n");
+			keep_going = false;
 		}
 
     printf( "whiskers: %s\n", whiskers.str().c_str() );
@@ -165,21 +172,21 @@ int main( int argc, char *argv[] )
       fprintf( stderr, "Writing to \"%s\"... ", of );
       int fd = open( of, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR );
       if ( fd < 0 ) {
-	perror( "open" );
-	exit( 1 );
+				perror( "open" );
+				exit( 1 );
       }
 
       auto remycc = whiskers.DNA();
       remycc.mutable_config()->CopyFrom( options.config_range.DNA() );
       remycc.mutable_optimizer()->CopyFrom( Whisker::get_optimizer().DNA() );
       if ( not remycc.SerializeToFileDescriptor( fd ) ) {
-	fprintf( stderr, "Could not serialize RemyCC.\n" );
-	exit( 1 );
+				fprintf( stderr, "Could not serialize RemyCC.\n" );
+				exit( 1 );
       }
 
       if ( close( fd ) < 0 ) {
-	perror( "close" );
-	exit( 1 );
+				perror( "close" );
+				exit( 1 );
       }
 
       fprintf( stderr, "done.\n" );
