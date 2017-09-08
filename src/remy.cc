@@ -5,11 +5,28 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <setjmp.h>
+#include <signal.h>
 
 #include "ratbreeder.hh"
 #include "dna.pb.h"
 #include "configrange.hh"
+
 using namespace std;
+jmp_buf flush_whisker_and_quit;
+bool already_handling_signal = false;
+
+void handle_sigint(int signum) {
+	if (!already_handling_signal) {
+		already_handling_signal = true;
+		printf("Caught signal %d. Jumping back out to main loop.\n", signum);
+		longjmp(flush_whisker_and_quit, 1);
+	} else {
+		printf("Already handling signal %d.\n", signum);
+	}
+}
+
+
 
 void print_range( const Range & range, const string & name )
 {
@@ -96,7 +113,7 @@ int main( int argc, char *argv[] )
 
   RatBreeder breeder( options, whisker_options );
 
-  unsigned int run = 0;
+  volatile unsigned int run = 0;
 
   printf( "#######################\n" );
   printf( "Evaluator simulations will run for %d ticks\n",
@@ -126,30 +143,21 @@ int main( int argc, char *argv[] )
     printf( "Not saving output. Use the of=FILENAME argument to save the results.\n" );
   }
 
-  RemyBuffers::ConfigVector training_configs;
-  bool written = false;
-
-  while ( 1 ) {
-    auto outcome = breeder.improve( whiskers );
-    printf( "run = %u, score = %f\n", run, outcome.score );
+    volatile bool keep_going = true;
+    while ( keep_going ) {
+    Evaluator< WhiskerTree >::Outcome outcome;
+    if (setjmp(flush_whisker_and_quit) == 0) { // real return
+      already_handling_signal = false;
+      outcome = breeder.improve( whiskers );
+      already_handling_signal = true;
+      printf( "run = %u, score = %f\n", run, outcome.score );
+    } else {
+      printf("Returned to main loop from signal handler.\n");
+      keep_going = false;
+		}
 
     printf( "whiskers: %s\n", whiskers.str().c_str() );
 
-    for ( auto &run : outcome.throughputs_delays ) {
-      if ( !(written) ) {
-        for ( auto &run : outcome.throughputs_delays) {
-          // record the config to the protobuf
-          RemyBuffers::NetConfig* net_config = training_configs.add_config();
-          *net_config = run.first.DNA();
-          written = true;
-
-        }
-      }
-      printf( "===\nconfig: %s\n", run.first.str().c_str() );
-      for ( auto &x : run.second ) {
-	printf( "sender: [tp=%f, del=%f]\n", x.first / run.first.link_ppt, x.second / run.first.delay );
-      }
-    }
 
     if ( !output_filename.empty() ) {
       char of[ 128 ];
@@ -164,7 +172,6 @@ int main( int argc, char *argv[] )
       auto remycc = whiskers.DNA();
       remycc.mutable_config()->CopyFrom( options.config_range.DNA() );
       remycc.mutable_optimizer()->CopyFrom( Whisker::get_optimizer().DNA() );
-      remycc.mutable_configvector()->CopyFrom( training_configs );
       if ( not remycc.SerializeToFileDescriptor( fd ) ) {
 	fprintf( stderr, "Could not serialize RemyCC.\n" );
 	exit( 1 );
@@ -181,6 +188,5 @@ int main( int argc, char *argv[] )
     fflush( NULL );
     run++;
   }
-
   return 0;
 }
