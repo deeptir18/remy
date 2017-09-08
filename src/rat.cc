@@ -26,9 +26,9 @@ void Rat::packets_received( const vector< Packet > & packets ) {
   _largest_ack = max( packets.at( packets.size() - 1 ).seq_num, _largest_ack );
 
   const Whisker & current_whisker( _whiskers.use_whisker( _memory, _track ) );
-
+  double srtt = _memory.srtt();
   _the_window = current_whisker.window( _the_window );
-  _intersend_time = current_whisker.intersend();
+  _intersend_time = ( current_whisker.intersend()) * (srtt/_the_window);
 }
 
 void Rat::reset( const double & )
