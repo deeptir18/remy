@@ -109,7 +109,7 @@ int main( int argc, char *argv[] )
   bool written = false;
 
   while ( 1 ) {
-    auto outcome = breeder.improve( fins );
+    auto outcome = breeder.improve( fins, 5 );
     printf( "run = %u, score = %f\n", run, outcome.score );
 
     printf( "fins: %s\n", fins.str().c_str() );

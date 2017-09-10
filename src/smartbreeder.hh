@@ -119,7 +119,7 @@ public:
   SmartBreeder( const BreederOptions & s_options, const WhiskerImproverOptions & s_whisker_options )
     : Breeder( s_options ), _whisker_options( s_whisker_options ) {};
 
-  Evaluator< WhiskerTree >::Outcome improve( WhiskerTree & whiskers );
+  Evaluator< WhiskerTree >::Outcome improve( WhiskerTree & whiskers, int num_generations );
 };
 
 #endif

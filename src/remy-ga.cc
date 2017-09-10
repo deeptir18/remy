@@ -5,12 +5,26 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <setjmp.h>
+#include <signal.h>
 
 #include "smartbreeder.hh"
 #include "dna.pb.h"
 #include "configrange.hh"
 using namespace std;
 
+jmp_buf flush_whisker_and_quit;
+bool already_handling_signal = false;
+
+void handle_sigint(int signum) {
+	if (!already_handling_signal) {
+		already_handling_signal = true;
+		printf("Caught signal %d. Jumping back out to main loop.\n", signum);
+		longjmp(flush_whisker_and_quit, 1);
+	} else {
+		printf("Already handling signal %d.\n", signum);
+	}
+}
 void print_range( const Range & range, const string & name )
 {
   printf( "Optimizing for %s over [%f : %f : %f]\n", name.c_str(),
@@ -138,44 +152,57 @@ int main( int argc, char *argv[] )
   } else {
     printf( "Not saving output. Use the of=FILENAME argument to save the results.\n" );
   }
-  unsigned int run = 0;
+  volatile unsigned int run = 0;
   // make an instance of "smart breeder"
   SmartBreeder breeder( options, whisker_options );
-  while ( 1 ) {
-    auto outcome = breeder.improve( whiskers );
-    printf( "run = %u, score = %f\n", run, outcome.score );
+  printf("Registering signal handler.\n");
+  signal(SIGINT, handle_sigint);
+
+  volatile bool keep_going = true;
+  while ( keep_going ) {
+	Evaluator< WhiskerTree >::Outcome outcome;
+	volatile int num_generations = ( run == 0 ) ? 2 : 3; // 2 if 1st outfile, 3 afterwards
+	if (setjmp(flush_whisker_and_quit) == 0) { // real return
+		already_handling_signal = false;
+		outcome = breeder.improve( whiskers, num_generations );
+		already_handling_signal = true;
+		printf( "run = %u, score = %f\n", run, outcome.score );
+	} else {
+		printf("Returned to main loop from signal handler.\n");
+		keep_going = false;
+	}
+
     printf( "whiskers: %s\n", whiskers.str().c_str() );
 
-    print_outcome( outcome );
+
     if ( !output_filename.empty() ) {
       char of[ 128 ];
       snprintf( of, 128, "%s.%d", output_filename.c_str(), run );
       fprintf( stderr, "Writing to \"%s\"... ", of );
       int fd = open( of, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR );
       if ( fd < 0 ) {
-	      perror( "open" );
-	      exit( 1 );
+				perror( "open" );
+				exit( 1 );
       }
 
       auto remycc = whiskers.DNA();
       remycc.mutable_config()->CopyFrom( options.config_range.DNA() );
       remycc.mutable_optimizer()->CopyFrom( Whisker::get_optimizer().DNA() );
       if ( not remycc.SerializeToFileDescriptor( fd ) ) {
-	      fprintf( stderr, "Could not serialize RemyCC.\n" );
-  	    exit( 1 );
+				fprintf( stderr, "Could not serialize RemyCC.\n" );
+				exit( 1 );
       }
 
       if ( close( fd ) < 0 ) {
-	      perror( "close" );
-	      exit( 1 );
+				perror( "close" );
+				exit( 1 );
       }
 
       fprintf( stderr, "done.\n" );
     }
 
     fflush( NULL );
-
-    run ++;
+    run++;
   }
 }
 

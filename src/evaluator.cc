@@ -19,9 +19,9 @@ Evaluator< T >::Evaluator( const ConfigRange & range )
     _configs()
 {
   // add configs from every point in the cube of configs
-  double tcp_senders_arr[5] = { 0, 1, 5, 10, 100 };
-  double bdp_arr[4] = { .5, 1, 2, 4 };
-  int count = 0;
+  double tcp_senders_arr[5] = { 0, 1, 5 };
+  double bdp_arr[4] = { .5, 1, 4 };
+  //int count = 0;
   // add configs from every point in the cube of configs
   for (double link_ppt = range.link_ppt.low; link_ppt <= range.link_ppt.high; link_ppt += range.link_ppt.incr) {
     for (double rtt = range.rtt.low; rtt <= range.rtt.high; rtt += range.rtt.incr) {
@@ -38,7 +38,7 @@ Evaluator< T >::Evaluator( const ConfigRange & range )
                 }
                 for ( double buffer_size : buffer_sizes ) {
                   _configs.push_back( NetConfig().set_link_ppt( link_ppt ).set_delay( rtt ).set_num_senders( senders ).set_on_duration( on ).set_off_duration(off).set_buffer_size( buffer_size ).set_stochastic_loss_rate( loss_rate ).set_num_tcp_senders( num_tcp_senders ) );
-                  std::cout << "Config # " << count << ": " << _configs.at(_configs.size() - 1).str().c_str() << std::endl;
+                  //std::cout << "Config # " << count << ": " << _configs.at(_configs.size() - 1).str().c_str() << std::endl;
                 }
                 if ( range.stochastic_loss_rate.isOne() ) { break; }
               }
@@ -169,13 +169,23 @@ single_simulation ( const NetConfig& config,
                  const unsigned int ticks)
 {
   WhiskerTree tree_copy( t );
-  Network<SenderGang<Rat, TimeSwitchedSender<Rat>>,
-  SenderGang<Rat, TimeSwitchedSender<Rat>>> network1( Rat( tree_copy, trace_whisker ), seed, config );
-  network1.run_simulation( ticks );
-  double score = network1.senders().utility();
-  vector< pair< double, double > > throughput_delay = network1.senders().throughputs_delays();
-  pair < double, vector < pair < double, double > > > summary = make_pair(score, throughput_delay);
-  return summary;
+  if ( config.num_tcp_senders == 0 ) {
+  	Network<SenderGang<Rat, TimeSwitchedSender<Rat>>,
+      SenderGang<Rat, TimeSwitchedSender<Rat>>> network1( Rat( tree_copy, trace_whisker ), seed, config );
+  	network1.run_simulation( ticks );
+  	double score = network1.senders().utility();
+  	vector< pair< double, double > > throughput_delay = network1.senders().throughputs_delays();
+  	pair < double, vector < pair < double, double > > > summary = make_pair(score, throughput_delay);
+  	return summary;
+  } else {
+    Network<SenderGang<Rat, TimeSwitchedSender<Rat>>,
+      SenderGang<Aimd, TimeSwitchedSender<Aimd>>> network2( Rat( tree_copy, trace_whisker ), Aimd(), seed, config);
+  	network2.run_simulation( ticks );
+  	double score = network2.senders().utility();
+  	vector< pair< double, double > > throughput_delay = network2.senders().throughputs_delays();
+  	pair < double, vector < pair < double, double > > > summary = make_pair(score, throughput_delay);
+  	return summary;
+  }
 }
 
 template <>
@@ -185,7 +195,6 @@ Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score_in_parallel( W
              const bool trace,
              const unsigned int ticks_to_run )
 {
-
   PRNG run_prng( prng_seed );
 
   run_whiskers.reset_counts();

@@ -155,7 +155,7 @@ int main( int argc, char *argv[] )
 		Evaluator< WhiskerTree >::Outcome outcome;
 		if (setjmp(flush_whisker_and_quit) == 0) { // real return
 			already_handling_signal = false;
-			outcome = breeder.improve( whiskers );
+			outcome = breeder.improve( whiskers, 5 );
 			already_handling_signal = true;
 			printf( "run = %u, score = %f\n", run, outcome.score );
 		} else {

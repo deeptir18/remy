@@ -4,7 +4,7 @@
 
 using namespace std;
 
-Evaluator< FinTree >::Outcome FishBreeder::improve( FinTree & fins )
+Evaluator< FinTree >::Outcome FishBreeder::improve( FinTree & fins, int num_generations )
 {
   /* back up the original fintree */
   /* this is to ensure we don't regress */
@@ -14,7 +14,7 @@ Evaluator< FinTree >::Outcome FishBreeder::improve( FinTree & fins )
   fins.reset_generation();
   unsigned int generation = 0;
 
-  while ( generation < 5 ) {
+  while ( int(generation) < num_generations ) {
     const Evaluator< FinTree > eval( _options.config_range );
 
     auto outcome( eval.score( fins ) );

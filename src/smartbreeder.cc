@@ -4,7 +4,7 @@
 
 using namespace std;
 
-Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers )
+Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers, int num_generations )
 {
   /* back up the original whiskertree */
   /* this is to ensure we don't regress */
@@ -13,7 +13,7 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers 
   /* evaluate the whiskers we have */
   whiskers.reset_generation();
   unsigned int generation = 0;
-  while ( generation < 5 ) {
+  while ( int(generation) < num_generations ) {
     const Evaluator< WhiskerTree > eval( _options.config_range );
     auto outcome( eval.score( whiskers ) );
 
@@ -112,6 +112,7 @@ SmartBreeder::get_score_to_beat( double current_score, Whisker& whisker_to_impro
 double
 SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree, double score_to_beat )
 {
+  std::cout << "In improve whisker function for smartbreeder" << std::endl;
   // evaluates replacements in sequence in a smart way
   vector< pair < const Whisker&, pair< bool, double > > > scores;
   vector< pair< double, Dir > > initial_best_improvements;
@@ -139,6 +140,7 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
       double avg_change = evaluate_initial_whisker_list( tree, bin.at( dir ), scores, eval, score_to_beat ) ;
       // which variable changed?
       pair< int, Dir> change_index = get_change_index( dir );
+	  cout << "Trying dir: " << dir.str().c_str() << std::endl;
       assert( change_index.first >= 0 && change_index.first < 3 );
       if ( avg_change > initial_best_improvements.at( change_index.first).first ) {
         initial_best_improvements[change_index.first] = make_pair( avg_change, change_index.second );
@@ -157,6 +159,7 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
   while (1) {
     vector < Whisker > next_whiskers = whisker_to_improve.next_in_direction( optimize_window_increment, optimize_window_multiple, optimize_intersend );
     if ( next_whiskers.size() == 0 ) {
+	  std::cout << "No next whiskers" << std::endl;
       break; // no more improvements after initial - nothing is better
     }
     vector< pair < const Whisker&, pair< bool, double > > > next_scores;
@@ -214,6 +217,7 @@ SmartBreeder::evaluate_initial_whisker_list( WhiskerTree &tree, vector< Whisker 
 double
 SmartBreeder::evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, vector< Whisker > &replacements, vector< pair < const Whisker&, pair< bool, double > > > &scores, Evaluator< WhiskerTree > eval)
 {
+  std::cout << "In evaluate whisker list function" << std::endl;
   double ret = score_to_beat;
   bool trace = false;
   int carefulness = 1;
@@ -226,6 +230,7 @@ SmartBreeder::evaluate_whisker_list( WhiskerTree &tree, double score_to_beat, ve
       assert (found_replacement);
       Evaluator<WhiskerTree>::Outcome outcome = eval.score_in_parallel( replaced_tree, trace, carefulness );
       double score = outcome.score;
+	cout << "Tried whisker: " << x.str().c_str() << "-> score: " << score << std::endl;
       scores.emplace_back( x, make_pair( true, score ) );
       if ( score > score_to_beat ) {
         printf("Tried Whisker: %s, and score improved to %f\n", x.str().c_str(), score);

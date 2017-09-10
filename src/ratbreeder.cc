@@ -4,7 +4,7 @@
 
 using namespace std;
 
-Evaluator< WhiskerTree >::Outcome RatBreeder::improve( WhiskerTree & whiskers )
+Evaluator< WhiskerTree >::Outcome RatBreeder::improve( WhiskerTree & whiskers, int num_generations )
 {
   /* back up the original whiskertree */
   /* this is to ensure we don't regress */
@@ -14,7 +14,7 @@ Evaluator< WhiskerTree >::Outcome RatBreeder::improve( WhiskerTree & whiskers )
   whiskers.reset_generation();
   unsigned int generation = 0;
 
-  while ( generation < 5 ) {
+  while ( int(generation) < num_generations ) {
     const Evaluator< WhiskerTree > eval( _options.config_range );
 
     auto outcome( eval.score( whiskers ) );
