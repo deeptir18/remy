@@ -1,7 +1,7 @@
 #include <boost/functional/hash.hpp>
 #include <vector>
 #include <cassert>
-
+#include <iostream>
 #include "memory.hh"
 
 using namespace std;
@@ -29,6 +29,15 @@ void Memory::packets_received( const vector< Packet > & packets, const unsigned 
       _min_rtt = rtt;
       _srtt = rtt;
     } else {
+	  // ignore if it's an out of order packet
+	  if ( x.tick_sent < _last_tick_sent || x.tick_received < _last_tick_received ) {
+		std::cout << "Out of order send or receive" << std::endl;
+		std::cout << "x.tick_sent: " << x.tick_sent << ", _last tick sent: " << _last_tick_sent << std::endl;
+		std::cout << "x.tick_receieved: " << x.tick_received << "_last tick receieved" << _last_tick_received <<std::endl;
+		continue;
+	  }
+	  //assert( x.tick_sent >= _last_tick_sent );
+	  //assert( x.tick_received >= _last_tick_received );
       _rec_send_ewma = (1 - alpha) * _rec_send_ewma + alpha * (x.tick_sent - _last_tick_sent);
       _rec_rec_ewma = (1 - alpha) * _rec_rec_ewma + alpha * (x.tick_received - _last_tick_received);
       _slow_rec_rec_ewma = (1 - slow_alpha) * _slow_rec_rec_ewma + slow_alpha * (x.tick_received - _last_tick_received);
@@ -36,7 +45,11 @@ void Memory::packets_received( const vector< Packet > & packets, const unsigned 
 
       _last_tick_sent = x.tick_sent;
       _last_tick_received = x.tick_received;
-      _srtt = ( 1 - alpha ) * _srtt + alpha * rtt;
+      _srtt = ( 1 - alpha ) * double( _srtt ) + alpha * double ( rtt );
+	  assert( _srtt > 0 );
+	  if ( _srtt > 1000 ) {
+		std::cout << "SRTT is : " << _srtt << std::endl;
+	}
       _min_rtt = min( _min_rtt, rtt );
       _rtt_ratio = double( rtt ) / double( _min_rtt );
       assert( _rtt_ratio >= 1.0 );
@@ -78,6 +91,7 @@ string Memory::str( unsigned int num ) const
       break;
     case 6:
       snprintf( tmp, 50, "send_rec_ratio=%f ", _send_rec_ratio );
+	  break;
   }
   return tmp;
 }

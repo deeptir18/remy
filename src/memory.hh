@@ -54,7 +54,7 @@ public:
       _srtt( 0 )
   {}
 
-  void reset( void ) { _rec_send_ewma = _rec_rec_ewma = _rtt_ratio = _slow_rec_rec_ewma = _rtt_diff = _queueing_delay = _last_tick_sent = _last_tick_received = _min_rtt = _send_rec_ratio = _srtt = 0; }
+  void reset( void ) { _rec_send_ewma = _rec_rec_ewma = _rtt_ratio = _slow_rec_rec_ewma = _rtt_diff = _queueing_delay = _send_rec_ratio = _last_tick_sent = _last_tick_received = _min_rtt = _srtt = 0; }
 
   static const unsigned int datasize = 6;
 

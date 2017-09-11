@@ -15,9 +15,9 @@ Evaluator< T >::Evaluator( const ConfigRange & range )
     _configs()
 {
   //double tcp_senders_arr[5] = { 0, 1, 5, 10, 100 };
-  double tcp_senders_arr[5] = {0,1,5,10,100};
+  double tcp_senders_arr[5] = {0,1,5};
   double bdp_arr[4] = { .5, 1, 4 };
-  int count = 0;
+  //int count = 0;
   // add configs from every point in the cube of configs
   for (double link_ppt = range.link_ppt.low; link_ppt <= range.link_ppt.high; link_ppt += range.link_ppt.incr) {
     for (double rtt = range.rtt.low; rtt <= range.rtt.high; rtt += range.rtt.incr) {
@@ -39,7 +39,7 @@ Evaluator< T >::Evaluator( const ConfigRange & range )
                 }
                 for ( double buffer_size : buffer_sizes ) {
                   _configs.push_back( NetConfig().set_link_ppt( link_ppt ).set_delay( rtt ).set_num_senders( senders ).set_on_duration( on ).set_off_duration(off).set_buffer_size( buffer_size ).set_stochastic_loss_rate( loss_rate ).set_num_tcp_senders( num_tcp_senders ) );
-                  std::cout << "Config # " << count << ": " << _configs.at(_configs.size() - 1).str().c_str() << std::endl;
+                  //std::cout << "Config # " << count << ": " << _configs.at(_configs.size() - 1).str().c_str() << std::endl;
                 }
                 if ( range.stochastic_loss_rate.isOne() ) { break; }
               }

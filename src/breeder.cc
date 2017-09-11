@@ -126,7 +126,7 @@ double ActionImprover< T, A >::improve( A & action_to_improve )
      const auto outcome( x.second.get() );
      const bool was_new_evaluation( outcome.first );
      const double score( outcome.second );
-
+	 std::cout << "Whisker: " << replacement.str().c_str() << "-> score: " << score << std::endl;
      /* should we cache this result? */
      if ( was_new_evaluation ) {
        eval_cache_.insert( make_pair( replacement, score ) );
