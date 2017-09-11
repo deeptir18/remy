@@ -16,6 +16,7 @@ Evaluator< WhiskerTree >::Outcome SmartBreeder::improve( WhiskerTree & whiskers,
   while ( int(generation) < num_generations ) {
     const Evaluator< WhiskerTree > eval( _options.config_range );
     auto outcome( eval.score( whiskers ) );
+	std::cout << "Original score: " << outcome.score << std::endl;
 
     /* is there a whisker at this generation that we can improve? */
     auto most_used_whisker_ptr = outcome.used_actions.most_used( generation );
@@ -140,9 +141,11 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
       double avg_change = evaluate_initial_whisker_list( tree, bin.at( dir ), scores, eval, score_to_beat ) ;
       // which variable changed?
       pair< int, Dir> change_index = get_change_index( dir );
-	  cout << "Trying dir: " << dir.str().c_str() << std::endl;
+	  cout << "Trying dir: " << dir.str().c_str() << "-> avg change: " << avg_change << std::endl;
+	  cout << "Original change index val: " <<  initial_best_improvements.at( change_index.first).first  << std::endl;
       assert( change_index.first >= 0 && change_index.first < 3 );
       if ( avg_change > initial_best_improvements.at( change_index.first).first ) {
+	    cout << "Something was good! " << dir.str().c_str() << std::endl;
         initial_best_improvements[change_index.first] = make_pair( avg_change, change_index.second );
       }
     }
@@ -157,11 +160,15 @@ SmartBreeder::improve_whisker( Whisker & whisker_to_improve, WhiskerTree & tree,
   double optimize_intersend = ( initial_best_improvements[INTERSEND].second == PLUS ) ? 1 : ( initial_best_improvements[INTERSEND].second == MINUS ) ? -1 : 0;
   double old_score = score_to_beat;
   while (1) {
+    std::cout << "in while true loop!" << std::endl;
     vector < Whisker > next_whiskers = whisker_to_improve.next_in_direction( optimize_window_increment, optimize_window_multiple, optimize_intersend );
     if ( next_whiskers.size() == 0 ) {
 	  std::cout << "No next whiskers" << std::endl;
       break; // no more improvements after initial - nothing is better
     }
+	for (Whisker &x: next_whiskers) {
+	  std::cout << "About to try ->" << x.str().c_str() << std::endl;
+	}
     vector< pair < const Whisker&, pair< bool, double > > > next_scores;
     // evaluate this whisker list and update the RemyCC
     evaluate_whisker_list( tree, score_to_beat, next_whiskers, next_scores, eval );

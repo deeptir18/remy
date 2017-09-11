@@ -2,7 +2,7 @@
 #include <cmath>
 #include <algorithm>
 #include <boost/functional/hash.hpp>
-
+#include <iostream>
 #include "whisker.hh"
 
 using namespace std;
@@ -46,25 +46,27 @@ RemyBuffers::Whisker Whisker::DNA( void ) const
 vector< Whisker > Whisker::next_in_direction( double optimize_window_increment, double optimize_window_multiple, double optimize_intersend ) const
 {
   vector< Whisker > ret;
+  std::cout << "In next in direction function" << std::endl;
   // maybe later or before -> can not only use min change (?)
-  double window_increment_change = get_optimizer().window_increment.min_change * optimize_window_increment;
-  double window_multiple_change = get_optimizer().window_multiple.min_change * optimize_window_multiple;
-  double intersend_change = get_optimizer().intersend.min_change * optimize_intersend;
-
+  double window_increment_change = get_optimizer().window_increment.min_change;
+  double window_multiple_change = get_optimizer().window_multiple.min_change;
+  double intersend_change = get_optimizer().intersend.min_change;
+  printf("Window incr: %f, window mult: %f, intersend: %f\n", window_increment_change, window_multiple_change, intersend_change);
   // return a vector with all these combinations of changes
   for ( double incr = 0; incr <= window_increment_change; incr += window_increment_change ) {
     for ( double mult = 0; mult <= window_multiple_change; mult += window_multiple_change ) {
       for ( double send = 0; send <= intersend_change; send += intersend_change ) {
         Whisker new_whisker { *this };
-	        new_whisker._window_increment += incr;
-	        new_whisker._window_multiple += mult;
-	        new_whisker._intersend += send;
-          if (!( ( incr == 0 ) && ( mult == 0 ) && ( send == 0 ) )) {
+	        new_whisker._window_increment += incr * optimize_window_increment;
+	        new_whisker._window_multiple += mult * optimize_window_multiple;
+	        new_whisker._intersend += send * optimize_intersend;
+          if (!( ( incr*optimize_window_increment == 0 ) && ( mult*optimize_window_multiple == 0 ) && ( send*optimize_intersend == 0 ) )) {
             ret.emplace_back( new_whisker );
           }
       }
     }
   }
+  printf("Returnimg from next in direction function\n");
   return ret;
 }
 
