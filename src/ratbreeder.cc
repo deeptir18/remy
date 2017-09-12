@@ -16,7 +16,7 @@ Evaluator< WhiskerTree >::Outcome RatBreeder::improve( WhiskerTree & whiskers )
 
   while ( generation < 3 ) {
     const Evaluator< WhiskerTree > eval( _options.config_range );
-
+	std::cout << "Current whiskers: " << whiskers.str().c_str() << std::endl;
     auto outcome( eval.score( whiskers ) );
     cout << "Original score: " << outcome.score << endl;
     /* is there a whisker at this generation that we can improve? */

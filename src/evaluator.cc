@@ -108,6 +108,7 @@ Evaluator< WhiskerTree >::Outcome Evaluator< WhiskerTree >::score( WhiskerTree &
 
   /* run tests */
   Evaluator::Outcome the_outcome;
+  assert( configs.size() > 0 );
   for ( auto &x : configs ) {
     /* run once */
     Network<SenderGang<Rat, TimeSwitchedSender<Rat>>,
